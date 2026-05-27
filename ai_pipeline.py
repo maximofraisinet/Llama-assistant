@@ -321,7 +321,17 @@ class SpeechPipelineWorker(QThread):
     def _synthesize_and_queue(self, text: str):
         """Sintetiza texto a audio usando Kokoro-ONNX y lo coloca en la cola."""
         try:
-            print(f"Sintetizando: '{text}'")
+            # 1. Limpiar asteriscos, guiones bajos y comillas invertidas de Markdown
+            clean_text = text.replace("*", "").replace("_", "").replace("`", "")
+            
+            # 2. Eliminar emojis (caracteres en los planos unicode suplementarios)
+            clean_text = re.sub(r'[\U00010000-\U0010ffff]', '', clean_text)
+            
+            # 3. Eliminar espacios múltiples y espacios previos a signos de puntuación comunes
+            clean_text = re.sub(r'\s+', ' ', clean_text)
+            clean_text = re.sub(r'\s+([.,;:!?])', r'\1', clean_text).strip()
+            
+            print(f"Sintetizando: '{clean_text}' (Original: '{text}')")
             voice = self.config.kokoro_voice or "em_alex"
             
             # Determinar el idioma del modelo Kokoro según el prefijo de la voz
@@ -332,8 +342,10 @@ class SpeechPipelineWorker(QThread):
             else:
                 lang = "en-us"
                 
-            samples, sample_rate = self.kokoro.create(text, voice=voice, lang=lang)
-            self.speech_queue.put((samples, text))
+            samples, sample_rate = self.kokoro.create(clean_text, voice=voice, lang=lang)
+            # Pasamos clean_text a la cola para que la animación de Lip-Sync y la reproducción
+            # se sincronicen con el texto pronunciado real.
+            self.speech_queue.put((samples, clean_text))
         except Exception as e:
             print(f"Error al sintetizar con Kokoro: {e}")
 

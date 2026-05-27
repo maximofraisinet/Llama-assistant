@@ -183,6 +183,7 @@ class AvatarWindow(QMainWindow):
         # Burbuja de texto (Status y transcripción/respuestas)
         self.status_label = QLabel("Cargando...", self)
         self.status_label.setWordWrap(True)
+        self.status_label.setTextFormat(Qt.TextFormat.MarkdownText)
         self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.status_label.setStyleSheet("""
             background-color: rgba(33, 33, 44, 210);
