@@ -1,0 +1,17 @@
+# Entorno de Python y Cachés
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+.pytest_cache/
+
+# Archivos de Configuración Local (Contienen rutas locales)
+config.json
+
+# Modelos Locales Pesados (GGUF, ONNX, BIN)
+*.gguf
+*.onnx
+*.bin
+!kokoro-v1.0/.gitkeep
