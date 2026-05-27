@@ -315,15 +315,15 @@ class SpeechPipelineWorker(QThread):
             # Indicar al consumidor que la generación de oraciones ha finalizado
             self.speech_queue.put((None, None))
             
-            # Esperar a que el hilo consumidor de reproducción finalice
-            playback_thread.wait()
-            self.pipeline_finished.emit()
-
-            # Buscar comandos para ejecutar en terminal
+            # Buscar comandos para ejecutar en terminal inmediatamente
             commands = re.findall(r'<cmd>(.*?)</cmd>', full_visible_response, re.DOTALL)
             for cmd in commands:
                 if cmd.strip():
                     self._open_terminal_with_command(cmd.strip())
+            
+            # Esperar a que el hilo consumidor de reproducción finalice
+            playback_thread.wait()
+            self.pipeline_finished.emit()
 
         except Exception as e:
             self.pipeline_error.emit(str(e))
