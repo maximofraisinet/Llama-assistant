@@ -427,7 +427,10 @@ class AvatarWindow(QMainWindow):
         if not hasattr(self, 'llm_response_text'):
             self.llm_response_text = ""
         self.llm_response_text += token
-        self.status_label.setText(self.llm_response_text)
+        
+        # Reemplazar etiquetas <cmd> y </cmd> por bloques de código Markdown
+        display_text = self.llm_response_text.replace("<cmd>", " `").replace("</cmd>", "` ")
+        self.status_label.setText(display_text)
 
     @pyqtSlot()
     def on_pipeline_finished(self):

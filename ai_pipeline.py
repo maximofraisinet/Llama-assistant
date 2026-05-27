@@ -239,6 +239,7 @@ class SpeechPipelineWorker(QThread):
             current_sentence = ""
             token_buffer = ""
             inside_think = False
+            full_visible_response = ""
             
             for chunk in response_stream:
                 if not self.is_running:
@@ -259,6 +260,7 @@ class SpeechPipelineWorker(QThread):
                         if visible:
                             self.llm_token_received.emit(visible)
                             current_sentence += visible
+                            full_visible_response += visible
                         token_buffer = ""
                         
                     elif "</think>" in token_buffer:
@@ -284,6 +286,7 @@ class SpeechPipelineWorker(QThread):
                             if not potential_prefix:
                                 self.llm_token_received.emit(token_buffer)
                                 current_sentence += token_buffer
+                                full_visible_response += token_buffer
                                 token_buffer = ""
 
                     # Procesar oraciones terminadas (fuera de bloques think)
@@ -303,6 +306,7 @@ class SpeechPipelineWorker(QThread):
             if not inside_think and token_buffer:
                 self.llm_token_received.emit(token_buffer)
                 current_sentence += token_buffer
+                full_visible_response += token_buffer
 
             # Sintetizar lo que quede en el búfer al finalizar el stream
             if self.is_running and current_sentence.strip():
@@ -315,14 +319,65 @@ class SpeechPipelineWorker(QThread):
             playback_thread.wait()
             self.pipeline_finished.emit()
 
+            # Buscar comandos para ejecutar en terminal
+            commands = re.findall(r'<cmd>(.*?)</cmd>', full_visible_response, re.DOTALL)
+            for cmd in commands:
+                if cmd.strip():
+                    self._open_terminal_with_command(cmd.strip())
+
         except Exception as e:
             self.pipeline_error.emit(str(e))
+
+    def _open_terminal_with_command(self, command: str):
+        """
+        Abre una terminal del sistema con el comando pre-escrito pero sin ejecutar,
+        permitiendo al usuario editarlo y ejecutarlo presionando Enter.
+        """
+        import subprocess
+        
+        # Escapar comillas dobles en el comando para que no rompa la cadena de bash
+        escaped_command = command.replace('"', '\\"')
+        
+        # El script bash que pre-rellena el buffer usando read -e -i
+        bash_script = (
+            f'read -e -i "{escaped_command}" -p "Ejecutar comando? (Enter para confirmar, Ctrl+C para cancelar): " cmd; '
+            f'history -s "$cmd"; '
+            f'echo ""; '
+            f'eval "$cmd"; '
+            f'exec bash'
+        )
+        
+        # Buscar terminales disponibles en orden de preferencia
+        terminals = ["konsole", "gnome-terminal", "xterm"]
+        launched = False
+        
+        for term in terminals:
+            # Verificar si la terminal está en el PATH
+            if subprocess.run(["which", term], capture_output=True).returncode == 0:
+                try:
+                    if term == "gnome-terminal":
+                        # gnome-terminal usa -- para pasar el comando
+                        subprocess.Popen([term, "--", "bash", "-c", bash_script])
+                    else:
+                        # konsole y xterm usan -e
+                        subprocess.Popen([term, "-e", "bash", "-c", bash_script])
+                    launched = True
+                    print(f"Terminal abierta con éxito usando {term}.")
+                    break
+                except Exception as e:
+                    print(f"Fallo al abrir terminal {term}: {e}")
+                    
+        if not launched:
+            print("Error: No se encontró ninguna terminal compatible (konsole, gnome-terminal, xterm).")
 
     def _synthesize_and_queue(self, text: str):
         """Sintetiza texto a audio usando Kokoro-ONNX y lo coloca en la cola."""
         try:
+            # 0. Eliminar etiquetas <cmd>...</cmd> y su contenido para que no sea leído por el TTS
+            clean_text = re.sub(r'<cmd>.*?</cmd>', '', text)
+            
             # 1. Limpiar asteriscos, guiones bajos y comillas invertidas de Markdown
-            clean_text = text.replace("*", "").replace("_", "").replace("`", "")
+            clean_text = clean_text.replace("*", "").replace("_", "").replace("`", "")
             
             # 2. Eliminar emojis (caracteres en los planos unicode suplementarios)
             clean_text = re.sub(r'[\U00010000-\U0010ffff]', '', clean_text)
