@@ -1,8 +1,8 @@
 import os
 import numpy as np
-from PyQt6.QtWidgets import QMainWindow, QWidget, QLabel, QVBoxLayout, QMenu, QMessageBox
+from PyQt6.QtWidgets import QMainWindow, QWidget, QLabel, QVBoxLayout, QMenu, QMessageBox, QApplication
 from PyQt6.QtGui import QPixmap, QCursor, QAction, QPainter
-from PyQt6.QtCore import Qt, QPoint, pyqtSlot, QObject, pyqtSignal
+from PyQt6.QtCore import Qt, QPoint, pyqtSlot, QObject, pyqtSignal, QTimer
 
 # Importar clases del proyecto
 from config_manager import ConfigManager
@@ -115,21 +115,23 @@ class AvatarWindow(QMainWindow):
         self.start_model_loading()
 
     def init_window_properties(self):
-        # Frameless, Always on Top
+        # Frameless, Always on Top, Tool window flag (prevents KWin taskbar clutter and forces standard positioning)
         self.setWindowFlags(
             Qt.WindowType.FramelessWindowHint | 
             Qt.WindowType.WindowStaysOnTopHint | 
-            Qt.WindowType.SubWindow
+            Qt.WindowType.Tool
         )
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
-        self.resize(280, 360)
+        self.setFixedSize(280, 360)
         self.reposition_window()
 
     def reposition_window(self):
-        """Mueve la ventana a la posición configurada en pantalla."""
-        screen = self.screen().availableGeometry()
+        """Mueve la ventana a la posición configurada en pantalla utilizando la geometría del escritorio principal."""
+        screen = QApplication.primaryScreen().availableGeometry()
         pos = self.config_manager.avatar_position
         
+        w = 280
+        h = 360
         margin_x = 40
         margin_y = 60
         
@@ -137,23 +139,25 @@ class AvatarWindow(QMainWindow):
             x = margin_x
             y = margin_x
         elif pos == "top_right":
-            x = screen.width() - self.width() - margin_x
+            x = screen.width() - w - margin_x
             y = margin_x
         elif pos == "center":
-            x = (screen.width() - self.width()) // 2
-            y = (screen.height() - self.height()) // 2
+            x = (screen.width() - w) // 2
+            y = (screen.height() - h) // 2
         elif pos == "bottom_left":
             x = margin_x
-            y = screen.height() - self.height() - margin_y
+            y = screen.height() - h - margin_y
         else:  # "bottom_right" por defecto
-            x = screen.width() - self.width() - margin_x
-            y = screen.height() - self.height() - margin_y
+            x = screen.width() - w - margin_x
+            y = screen.height() - h - margin_y
             
-        self.move(x, y)
+        self.setGeometry(x, y, w, h)
 
     def showEvent(self, event):
         super().showEvent(event)
-        self.reposition_window()
+        # Ejecutar el reposicionamiento 100ms después de que KWin mapee la ventana
+        # para forzar la posición e impedir que la centre de forma predeterminada
+        QTimer.singleShot(100, self.reposition_window)
 
     def init_ui(self):
         central_widget = QWidget(self)

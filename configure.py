@@ -1,4 +1,11 @@
+import os
 import sys
+
+# Force the X11 platform plugin (xcb) on Wayland to allow absolute window positioning.
+# Modern Linux desktops running Wayland (like KDE Plasma or GNOME) run Xwayland by default.
+if os.environ.get("XDG_SESSION_TYPE") == "wayland":
+    os.environ.setdefault("QT_QPA_PLATFORM", "xcb")
+
 from PyQt6.QtWidgets import QApplication
 from config_manager import ConfigManager
 from settings_dialog import SettingsDialog
