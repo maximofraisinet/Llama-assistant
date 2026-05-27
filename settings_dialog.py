@@ -65,6 +65,24 @@ class SettingsDialog(QDialog):
         self.context_spin.setValue(self.config_manager.llm_n_ctx)
         pref_layout.addRow(QLabel("Ventana de Contexto (Tokens):"), self.context_spin)
         
+        # Campo para Tamaño de Modelo Whisper
+        self.whisper_combo = QComboBox()
+        self.whisper_combo.addItem("tiny (~1 GB RAM/VRAM, Muy Rápido)", "tiny")
+        self.whisper_combo.addItem("base (~2 GB RAM/VRAM, Rápido y Equilibrado)", "base")
+        self.whisper_combo.addItem("small (~4 GB RAM/VRAM, Precisión Media)", "small")
+        self.whisper_combo.addItem("medium (~8 GB RAM/VRAM, Alta Precisión)", "medium")
+        self.whisper_combo.addItem("large-v3 (~16 GB RAM/VRAM, Máxima Precisión)", "large-v3")
+        
+        # Pre-seleccionar
+        saved_whisper = self.config_manager.whisper_model_size
+        whisper_idx = self.whisper_combo.findData(saved_whisper)
+        if whisper_idx != -1:
+            self.whisper_combo.setCurrentIndex(whisper_idx)
+        else:
+            self.whisper_combo.setCurrentIndex(1) # base por defecto
+            
+        pref_layout.addRow(QLabel("Tamaño de Modelo Whisper STT:"), self.whisper_combo)
+        
         main_layout.addWidget(pref_group)
 
         # 2. Grupo de Modelos de IA
@@ -311,6 +329,7 @@ class SettingsDialog(QDialog):
         
         prompt_val = self.prompt_text.toPlainText().strip()
         context_val = self.context_spin.value()
+        whisper_val = self.whisper_combo.currentData()
         
         self.config_manager.input_device_name = input_name
         self.config_manager.output_device_name = output_name
@@ -322,6 +341,7 @@ class SettingsDialog(QDialog):
         self.config_manager.kokoro_voices_path = voices_path
         self.config_manager.system_prompt = prompt_val if prompt_val else None
         self.config_manager.llm_n_ctx = context_val
+        self.config_manager.whisper_model_size = whisper_val
 
         # Guardar en archivo
         if self.config_manager.save():

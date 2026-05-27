@@ -22,7 +22,8 @@ class ConfigManager:
             "use_gpu": False,
             "kokoro_voice": "em_alex",
             "system_prompt": None,
-            "llm_n_ctx": 2048
+            "llm_n_ctx": 2048,
+            "whisper_model_size": "base"
         }
         self.load()
 
@@ -211,3 +212,11 @@ class ConfigManager:
     @llm_n_ctx.setter
     def llm_n_ctx(self, val):
         self.config_data["llm_n_ctx"] = int(val)
+
+    @property
+    def whisper_model_size(self):
+        return self.config_data.get("whisper_model_size", "base")
+
+    @whisper_model_size.setter
+    def whisper_model_size(self, val):
+        self.config_data["whisper_model_size"] = val

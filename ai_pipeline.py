@@ -108,8 +108,9 @@ class ModelLoaderThread(QThread):
             if self.config.use_gpu:
                 try:
                     print("Intentando cargar Faster-Whisper en GPU (CUDA)...")
+                    w_size = self.config.whisper_model_size
                     whisper = WhisperModel(
-                        "base",
+                        w_size,
                         device="cuda",
                         compute_type="float16"
                     )
@@ -119,8 +120,9 @@ class ModelLoaderThread(QThread):
                     whisper = None
                     
             if whisper is None:
+                w_size = self.config.whisper_model_size
                 whisper = WhisperModel(
-                    "base",
+                    w_size,
                     device="cpu",
                     compute_type="int8"
                 )
