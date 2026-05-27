@@ -20,7 +20,8 @@ class ConfigManager:
             "kokoro_voices_path": None,
             "avatar_position": "bottom_right",
             "use_gpu": False,
-            "kokoro_voice": "em_alex"
+            "kokoro_voice": "em_alex",
+            "system_prompt": None
         }
         self.load()
 
@@ -193,3 +194,11 @@ class ConfigManager:
     @kokoro_voice.setter
     def kokoro_voice(self, val):
         self.config_data["kokoro_voice"] = val
+
+    @property
+    def system_prompt(self):
+        return self.config_data.get("system_prompt")
+
+    @system_prompt.setter
+    def system_prompt(self, val):
+        self.config_data["system_prompt"] = val

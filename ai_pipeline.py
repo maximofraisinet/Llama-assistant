@@ -186,23 +186,30 @@ class SpeechPipelineWorker(QThread):
             self.status_changed.emit("Pensando respuesta..." if is_spanish else "Thinking response...")
             hardware_info = get_hardware_info()
             
-            if is_spanish:
-                system_prompt = (
-                    "Eres un asistente virtual de escritorio para Linux con apariencia de diablo rojo.\n"
-                    "Eres ingenioso, directo y respondes en español.\n"
-                    f"Información de hardware del sistema de forma oculta:\n{hardware_info}\n\n"
-                    "IMPORTANTE: No uses etiquetas <think> ni muestres tu proceso de razonamiento. Responde directamente de forma inmediata.\n"
-                    "Responde de forma concisa y conversacional (máximo 2 oraciones), ya que tu respuesta "
-                    "será leída en voz alta por el motor de TTS."
-                )
+            custom_prompt = self.config.system_prompt
+            if custom_prompt and custom_prompt.strip():
+                if "{hardware_info}" in custom_prompt:
+                    system_prompt = custom_prompt.replace("{hardware_info}", hardware_info)
+                else:
+                    system_prompt = f"{custom_prompt}\n\n[Información de hardware / Hardware info:\n{hardware_info}]"
             else:
-                system_prompt = (
-                    "You are a Linux desktop virtual assistant with the appearance of a red devil.\n"
-                    "You are witty, direct, and respond in English.\n"
-                    f"System hardware info (hidden):\n{hardware_info}\n\n"
-                    "IMPORTANT: Do NOT output any <think> tags or reasoning. Go straight to the answer immediately.\n"
-                    "Be very concise and conversational (maximum 2 sentences), as your response will be read aloud by a TTS engine."
-                )
+                if is_spanish:
+                    system_prompt = (
+                        "Eres un asistente virtual de escritorio para Linux con apariencia de diablo rojo.\n"
+                        "Eres ingenioso, directo y respondes en español.\n"
+                        f"Información de hardware del sistema de forma oculta:\n{hardware_info}\n\n"
+                        "IMPORTANTE: No uses etiquetas <think> ni muestres tu proceso de razonamiento. Responde directamente de forma inmediata.\n"
+                        "Responde de forma concisa y conversacional (máximo 2 oraciones), ya que tu respuesta "
+                        "será leída en voz alta por el motor de TTS."
+                    )
+                else:
+                    system_prompt = (
+                        "You are a Linux desktop virtual assistant with the appearance of a red devil.\n"
+                        "You are witty, direct, and respond in English.\n"
+                        f"System hardware info (hidden):\n{hardware_info}\n\n"
+                        "IMPORTANT: Do NOT output any <think> tags or reasoning. Go straight to the answer immediately.\n"
+                        "Be very concise and conversational (maximum 2 sentences), as your response will be read aloud by a TTS engine."
+                    )
 
             # Iniciar el consumidor de audio en un hilo secundario independiente
             playback_thread = QThread()

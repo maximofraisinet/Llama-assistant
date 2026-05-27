@@ -2,7 +2,7 @@ import os
 import sounddevice as sd
 from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QComboBox, 
-    QLineEdit, QPushButton, QFileDialog, QMessageBox, QGroupBox, QFormLayout, QCheckBox
+    QLineEdit, QPushButton, QFileDialog, QMessageBox, QGroupBox, QFormLayout, QCheckBox, QTextEdit
 )
 from PyQt6.QtCore import Qt
 
@@ -15,7 +15,7 @@ class SettingsDialog(QDialog):
         super().__init__(parent)
         self.config_manager = config_manager
         self.setWindowTitle("Configuración del Asistente Virtual")
-        self.resize(550, 400)
+        self.resize(580, 580)
         self.setWindowFlags(self.windowFlags() & ~Qt.WindowType.WindowContextHelpButtonHint)
         self.init_ui()
 
@@ -156,6 +156,22 @@ class SettingsDialog(QDialog):
 
         main_layout.addWidget(models_group)
 
+        # 2.5. Grupo de System Prompt
+        prompt_group = QGroupBox("System Prompt Personalizado")
+        prompt_layout = QVBoxLayout(prompt_group)
+        self.prompt_text = QTextEdit()
+        self.prompt_text.setPlaceholderText(
+            "Escribe aquí tu prompt personalizado...\n"
+            "Ejemplo: Eres un pirata que habla en español.\n"
+            "Puedes usar {hardware_info} para inyectar recursos del sistema.\n"
+            "Dejar vacío para el prompt del diablo rojo por defecto."
+        )
+        self.prompt_text.setAcceptRichText(False)
+        self.prompt_text.setText(self.config_manager.system_prompt or "")
+        self.prompt_text.setMaximumHeight(80)
+        prompt_layout.addWidget(self.prompt_text)
+        main_layout.addWidget(prompt_group)
+
         # 3. Botones Aceptar / Cancelar
         btn_layout = QHBoxLayout()
         save_btn = QPushButton("Guardar Configuración")
@@ -286,6 +302,8 @@ class SettingsDialog(QDialog):
         use_gpu_val = self.gpu_checkbox.isChecked()
         voice_name = self.voice_combo.currentData()
         
+        prompt_val = self.prompt_text.toPlainText().strip()
+        
         self.config_manager.input_device_name = input_name
         self.config_manager.output_device_name = output_name
         self.config_manager.avatar_position = pos_name
@@ -294,6 +312,7 @@ class SettingsDialog(QDialog):
         self.config_manager.llm_model_path = llm_path
         self.config_manager.kokoro_onnx_path = onnx_path
         self.config_manager.kokoro_voices_path = voices_path
+        self.config_manager.system_prompt = prompt_val if prompt_val else None
 
         # Guardar en archivo
         if self.config_manager.save():
