@@ -2,7 +2,7 @@ import os
 import sounddevice as sd
 from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QComboBox, 
-    QLineEdit, QPushButton, QFileDialog, QMessageBox, QGroupBox, QFormLayout, QCheckBox, QTextEdit
+    QLineEdit, QPushButton, QFileDialog, QMessageBox, QGroupBox, QFormLayout, QCheckBox, QTextEdit, QSpinBox
 )
 from PyQt6.QtCore import Qt
 
@@ -57,6 +57,13 @@ class SettingsDialog(QDialog):
         self.gpu_checkbox = QCheckBox("Usar aceleración gráfica por hardware (Nvidia CUDA / GPU)")
         self.gpu_checkbox.setChecked(self.config_manager.use_gpu)
         pref_layout.addRow(self.gpu_checkbox)
+        
+        # Campo para Ventana de Contexto (Tokens)
+        self.context_spin = QSpinBox()
+        self.context_spin.setRange(512, 32768)
+        self.context_spin.setSingleStep(512)
+        self.context_spin.setValue(self.config_manager.llm_n_ctx)
+        pref_layout.addRow(QLabel("Ventana de Contexto (Tokens):"), self.context_spin)
         
         main_layout.addWidget(pref_group)
 
@@ -303,6 +310,7 @@ class SettingsDialog(QDialog):
         voice_name = self.voice_combo.currentData()
         
         prompt_val = self.prompt_text.toPlainText().strip()
+        context_val = self.context_spin.value()
         
         self.config_manager.input_device_name = input_name
         self.config_manager.output_device_name = output_name
@@ -313,6 +321,7 @@ class SettingsDialog(QDialog):
         self.config_manager.kokoro_onnx_path = onnx_path
         self.config_manager.kokoro_voices_path = voices_path
         self.config_manager.system_prompt = prompt_val if prompt_val else None
+        self.config_manager.llm_n_ctx = context_val
 
         # Guardar en archivo
         if self.config_manager.save():

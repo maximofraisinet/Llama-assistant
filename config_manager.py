@@ -21,7 +21,8 @@ class ConfigManager:
             "avatar_position": "bottom_right",
             "use_gpu": False,
             "kokoro_voice": "em_alex",
-            "system_prompt": None
+            "system_prompt": None,
+            "llm_n_ctx": 2048
         }
         self.load()
 
@@ -202,3 +203,11 @@ class ConfigManager:
     @system_prompt.setter
     def system_prompt(self, val):
         self.config_data["system_prompt"] = val
+
+    @property
+    def llm_n_ctx(self):
+        return int(self.config_data.get("llm_n_ctx", 2048))
+
+    @llm_n_ctx.setter
+    def llm_n_ctx(self, val):
+        self.config_data["llm_n_ctx"] = int(val)

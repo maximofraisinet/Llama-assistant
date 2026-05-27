@@ -81,9 +81,10 @@ class ModelLoaderThread(QThread):
             if self.config.use_gpu:
                 try:
                     print("Intentando cargar Llama.cpp en GPU (Nvidia CUDA)...")
+                    n_ctx_val = self.config.llm_n_ctx
                     llama = Llama(
                         model_path=self.config.llm_model_path,
-                        n_ctx=2048,
+                        n_ctx=n_ctx_val,
                         n_gpu_layers=-1,
                         verbose=False
                     )
@@ -93,9 +94,10 @@ class ModelLoaderThread(QThread):
                     llama = None
             
             if llama is None:
+                n_ctx_val = self.config.llm_n_ctx
                 llama = Llama(
                     model_path=self.config.llm_model_path,
-                    n_ctx=2048,
+                    n_ctx=n_ctx_val,
                     n_gpu_layers=0,
                     verbose=False
                 )
