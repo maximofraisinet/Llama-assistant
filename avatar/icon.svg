@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <!-- Background Gradient -->
+    <radialGradient id="bgGrad" cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
+      <stop offset="0%" stop-color="#2d1212" />
+      <stop offset="100%" stop-color="#120505" />
+    </radialGradient>
+    <!-- Devil Face Gradient (Vibrant Red/Crimson) -->
+    <linearGradient id="devilGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ff3b3b" />
+      <stop offset="50%" stop-color="#d31010" />
+      <stop offset="100%" stop-color="#800000" />
+    </linearGradient>
+    <!-- Horns Gradient (Sleek Dark/Purple Grey) -->
+    <linearGradient id="hornGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#4a4a4a" />
+      <stop offset="100%" stop-color="#1c1c1c" />
+    </linearGradient>
+    <!-- Eyes Glow Gradient -->
+    <linearGradient id="eyeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffe600" />
+      <stop offset="100%" stop-color="#ff7700" />
+    </linearGradient>
+    <!-- Shadow effect -->
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="8" stdDeviation="6" flood-color="#000000" flood-opacity="0.6"/>
+    </filter>
+  </defs>
+
+  <!-- Circular Base (Background) -->
+  <circle cx="256" cy="256" r="240" fill="url(#bgGrad)" stroke="#ff3b3b" stroke-width="4" />
+
+  <!-- Left Horn -->
+  <path d="M 160 180 C 130 110, 110 80, 70 70 C 95 105, 120 150, 130 190 Z" fill="url(#hornGrad)" filter="url(#shadow)" />
+  <!-- Right Horn -->
+  <path d="M 352 180 C 382 110, 402 80, 442 70 C 417 105, 392 150, 382 190 Z" fill="url(#hornGrad)" filter="url(#shadow)" />
+
+  <!-- Devil Head/Face -->
+  <path d="M 130 240 
+           C 130 150, 382 150, 382 240 
+           C 382 330, 340 380, 256 380 
+           C 172 380, 130 330, 130 240 Z" 
+        fill="url(#devilGrad)" filter="url(#shadow)" />
+
+  <!-- Left Eye (Slanted, Mischievous) -->
+  <path d="M 170 210 Q 200 215 220 200 Q 200 230 170 210 Z" fill="url(#eyeGrad)" />
+  <!-- Right Eye (Slanted, Mischievous) -->
+  <path d="M 342 210 Q 312 215 292 200 Q 312 230 342 210 Z" fill="url(#eyeGrad)" />
+
+  <!-- Left Eyebrow (Angry/Expressive) -->
+  <path d="M 160 195 Q 195 200 225 185" stroke="#1c1c1c" stroke-width="6" stroke-linecap="round" fill="none" />
+  <!-- Right Eyebrow (Angry/Expressive) -->
+  <path d="M 352 195 Q 317 200 287 185" stroke="#1c1c1c" stroke-width="6" stroke-linecap="round" fill="none" />
+
+  <!-- Devil Smile (Cute/Mischievous smirk) -->
+  <path d="M 216 300 Q 256 330 296 300" stroke="#1c1c1c" stroke-width="5" stroke-linecap="round" fill="none" />
+  <!-- Little Fangs -->
+  <polygon points="230,307 236,317 242,308" fill="#ffffff" />
+  <polygon points="282,307 276,317 270,308" fill="#ffffff" />
+</svg>

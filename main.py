@@ -7,6 +7,7 @@ if os.environ.get("XDG_SESSION_TYPE") == "wayland":
     os.environ.setdefault("QT_QPA_PLATFORM", "xcb")
 
 from PyQt6.QtWidgets import QApplication, QMessageBox
+from PyQt6.QtGui import QIcon
 from config_manager import ConfigManager
 from settings_dialog import SettingsDialog
 from avatar_window import AvatarWindow
@@ -15,6 +16,7 @@ def main():
     # Inicializar la aplicación Qt
     app = QApplication(sys.argv)
     app.setQuitOnLastWindowClosed(False)
+    app.setWindowIcon(QIcon("/home/maximo/Código/Python/Llama-assistant/avatar/icon.svg"))
     
     # Crear el gestor de configuración
     config_manager = ConfigManager()
