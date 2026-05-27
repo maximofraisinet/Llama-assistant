@@ -94,6 +94,66 @@ class SettingsDialog(QDialog):
         kokoro_voices_layout.addWidget(kokoro_voices_btn)
         models_layout.addRow(QLabel("Archivo de Voces Kokoro (.bin):"), kokoro_voices_layout)
 
+        # Selección de Voz de Kokoro
+        self.voice_combo = QComboBox()
+        
+        # Voces en Español
+        spanish_voices = [
+            ("Español: em_alex (Masculino - Recomendado)", "em_alex"),
+            ("Español: ef_dora (Femenino)", "ef_dora"),
+            ("Español: em_santa (Masculino)", "em_santa")
+        ]
+        # Voces en Inglés (EEUU)
+        us_voices = [
+            ("Inglés (EEUU): am_adam (Masculino)", "am_adam"),
+            ("Inglés (EEUU): af_sarah (Femenino)", "af_sarah"),
+            ("Inglés (EEUU): af_alloy (Femenino)", "af_alloy"),
+            ("Inglés (EEUU): af_aoede (Femenino)", "af_aoede"),
+            ("Inglés (EEUU): af_bella (Femenino)", "af_bella"),
+            ("Inglés (EEUU): af_heart (Femenino)", "af_heart"),
+            ("Inglés (EEUU): af_jessica (Femenino)", "af_jessica"),
+            ("Inglés (EEUU): af_kore (Femenino)", "af_kore"),
+            ("Inglés (EEUU): af_nicole (Femenino)", "af_nicole"),
+            ("Inglés (EEUU): af_nova (Femenino)", "af_nova"),
+            ("Inglés (EEUU): af_river (Femenino)", "af_river"),
+            ("Inglés (EEUU): af_sky (Femenino)", "af_sky"),
+            ("Inglés (EEUU): am_echo (Masculino)", "am_echo"),
+            ("Inglés (EEUU): am_eric (Masculino)", "am_eric"),
+            ("Inglés (EEUU): am_fenrir (Masculino)", "am_fenrir"),
+            ("Inglés (EEUU): am_liam (Masculino)", "am_liam"),
+            ("Inglés (EEUU): am_michael (Masculino)", "am_michael"),
+            ("Inglés (EEUU): am_onyx (Masculino)", "am_onyx"),
+            ("Inglés (EEUU): am_puck (Masculino)", "am_puck"),
+            ("Inglés (EEUU): am_santa (Masculino)", "am_santa")
+        ]
+        # Voces en Inglés (Reino Unido)
+        uk_voices = [
+            ("Inglés (Reino Unido): bf_alice (Femenino)", "bf_alice"),
+            ("Inglés (Reino Unido): bf_emma (Femenino)", "bf_emma"),
+            ("Inglés (Reino Unido): bf_isabella (Femenino)", "bf_isabella"),
+            ("Inglés (Reino Unido): bf_lily (Femenino)", "bf_lily"),
+            ("Inglés (Reino Unido): bm_daniel (Masculino)", "bm_daniel"),
+            ("Inglés (Reino Unido): bm_fable (Masculino)", "bm_fable"),
+            ("Inglés (Reino Unido): bm_george (Masculino)", "bm_george"),
+            ("Inglés (Reino Unido): bm_lewis (Masculino)", "bm_lewis")
+        ]
+        
+        # Añadir voces al combo box
+        for display_name, val in spanish_voices:
+            self.voice_combo.addItem(display_name, val)
+        for display_name, val in us_voices:
+            self.voice_combo.addItem(display_name, val)
+        for display_name, val in uk_voices:
+            self.voice_combo.addItem(display_name, val)
+            
+        # Pre-seleccionar la voz guardada
+        saved_voice = self.config_manager.kokoro_voice
+        voice_idx = self.voice_combo.findData(saved_voice)
+        if voice_idx != -1:
+            self.voice_combo.setCurrentIndex(voice_idx)
+            
+        models_layout.addRow(QLabel("Voz de Kokoro TTS:"), self.voice_combo)
+
         main_layout.addWidget(models_group)
 
         # 3. Botones Aceptar / Cancelar
@@ -219,16 +279,18 @@ class SettingsDialog(QDialog):
             )
             return
 
-        # Obtener valores seleccionados de los combos (nombres de dispositivo, posición y GPU)
+        # Obtener valores seleccionados de los combos (nombres de dispositivo, posición, GPU y voz)
         input_name = self.input_combo.currentData()
         output_name = self.output_combo.currentData()
         pos_name = self.position_combo.currentData()
         use_gpu_val = self.gpu_checkbox.isChecked()
+        voice_name = self.voice_combo.currentData()
         
         self.config_manager.input_device_name = input_name
         self.config_manager.output_device_name = output_name
         self.config_manager.avatar_position = pos_name
         self.config_manager.use_gpu = use_gpu_val
+        self.config_manager.kokoro_voice = voice_name
         self.config_manager.llm_model_path = llm_path
         self.config_manager.kokoro_onnx_path = onnx_path
         self.config_manager.kokoro_voices_path = voices_path

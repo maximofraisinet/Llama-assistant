@@ -164,32 +164,45 @@ class SpeechPipelineWorker(QThread):
 
             # --- 1. STT (Whisper) ---
             self.status_changed.emit("Transcribiendo voz...")
+            voice = self.config.kokoro_voice or "em_alex"
+            is_spanish = voice.startswith("ef") or voice.startswith("em")
+            transcribe_lang = "es" if is_spanish else "en"
+
             segments, info = self.whisper.transcribe(
                 self.audio_data, 
-                language="es",
+                language=transcribe_lang,
                 beam_size=5
             )
             
             transcription = " ".join([segment.text for segment in segments]).strip()
             if not transcription:
-                self.status_changed.emit("No se detectó voz clara.")
+                self.status_changed.emit("No se detectó voz clara." if is_spanish else "No clear speech detected.")
                 self.pipeline_finished.emit()
                 return
                 
             self.transcription_done.emit(transcription)
 
             # --- 2. Preparar Prompt y Llamada a LLM ---
-            self.status_changed.emit("Pensando respuesta...")
+            self.status_changed.emit("Pensando respuesta..." if is_spanish else "Thinking response...")
             hardware_info = get_hardware_info()
             
-            system_prompt = (
-                "Eres un asistente virtual de escritorio para Linux con apariencia de diablo rojo.\n"
-                "Eres ingenioso, directo y respondes en español.\n"
-                f"Información de hardware del sistema de forma oculta:\n{hardware_info}\n\n"
-                "IMPORTANTE: No uses etiquetas <think> ni muestres tu proceso de razonamiento. Responde directamente de forma inmediata.\n"
-                "Responde de forma concisa y conversacional (máximo 2 oraciones), ya que tu respuesta "
-                "será leída en voz alta por el motor de TTS."
-            )
+            if is_spanish:
+                system_prompt = (
+                    "Eres un asistente virtual de escritorio para Linux con apariencia de diablo rojo.\n"
+                    "Eres ingenioso, directo y respondes en español.\n"
+                    f"Información de hardware del sistema de forma oculta:\n{hardware_info}\n\n"
+                    "IMPORTANTE: No uses etiquetas <think> ni muestres tu proceso de razonamiento. Responde directamente de forma inmediata.\n"
+                    "Responde de forma concisa y conversacional (máximo 2 oraciones), ya que tu respuesta "
+                    "será leída en voz alta por el motor de TTS."
+                )
+            else:
+                system_prompt = (
+                    "You are a Linux desktop virtual assistant with the appearance of a red devil.\n"
+                    "You are witty, direct, and respond in English.\n"
+                    f"System hardware info (hidden):\n{hardware_info}\n\n"
+                    "IMPORTANT: Do NOT output any <think> tags or reasoning. Go straight to the answer immediately.\n"
+                    "Be very concise and conversational (maximum 2 sentences), as your response will be read aloud by a TTS engine."
+                )
 
             # Iniciar el consumidor de audio en un hilo secundario independiente
             playback_thread = QThread()
@@ -298,9 +311,17 @@ class SpeechPipelineWorker(QThread):
         """Sintetiza texto a audio usando Kokoro-ONNX y lo coloca en la cola."""
         try:
             print(f"Sintetizando: '{text}'")
-            # Usar la voz masculina española por defecto
-            voice = "em_alex"
-            samples, sample_rate = self.kokoro.create(text, voice=voice, lang="es")
+            voice = self.config.kokoro_voice or "em_alex"
+            
+            # Determinar el idioma del modelo Kokoro según el prefijo de la voz
+            if voice.startswith("ef") or voice.startswith("em"):
+                lang = "es"
+            elif voice.startswith("bf") or voice.startswith("bm"):
+                lang = "en-gb"
+            else:
+                lang = "en-us"
+                
+            samples, sample_rate = self.kokoro.create(text, voice=voice, lang=lang)
             self.speech_queue.put((samples, text))
         except Exception as e:
             print(f"Error al sintetizar con Kokoro: {e}")

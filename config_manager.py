@@ -19,7 +19,8 @@ class ConfigManager:
             "kokoro_onnx_path": None,
             "kokoro_voices_path": None,
             "avatar_position": "bottom_right",
-            "use_gpu": False
+            "use_gpu": False,
+            "kokoro_voice": "em_alex"
         }
         self.load()
 
@@ -184,3 +185,11 @@ class ConfigManager:
     @use_gpu.setter
     def use_gpu(self, val):
         self.config_data["use_gpu"] = bool(val)
+
+    @property
+    def kokoro_voice(self):
+        return self.config_data.get("kokoro_voice", "em_alex")
+
+    @kokoro_voice.setter
+    def kokoro_voice(self, val):
+        self.config_data["kokoro_voice"] = val
