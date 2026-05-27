@@ -14,6 +14,7 @@ from avatar_window import AvatarWindow
 def main():
     # Inicializar la aplicación Qt
     app = QApplication(sys.argv)
+    app.setQuitOnLastWindowClosed(False)
     
     # Crear el gestor de configuración
     config_manager = ConfigManager()

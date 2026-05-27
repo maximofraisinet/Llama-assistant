@@ -52,6 +52,8 @@ class HotkeyListener(QObject):
                 return "ctrl"
             if "shift" in name:
                 return "shift"
+            if "alt" in name:
+                return "alt"
             if name == "space":
                 return "space"
         else:
@@ -65,8 +67,8 @@ class HotkeyListener(QObject):
         name = self._get_key_name(key)
         if name:
             self.active_keys.add(name)
-            # Combinación Ctrl + J
-            if "ctrl" in self.active_keys and "j" in self.active_keys:
+            # Combinación Ctrl + Alt + J
+            if "ctrl" in self.active_keys and "alt" in self.active_keys and "j" in self.active_keys:
                 if not self.is_triggered:
                     self.is_triggered = True
                     self.pressed.emit()
@@ -78,7 +80,7 @@ class HotkeyListener(QObject):
                 self.active_keys.remove(name)
             
             # Si estaba activo y se suelta alguna de las teclas del atajo
-            if self.is_triggered and (name in ("ctrl", "j")):
+            if self.is_triggered and (name in ("ctrl", "alt", "j")):
                 self.is_triggered = False
                 self.released.emit()
 
@@ -105,6 +107,11 @@ class AvatarWindow(QMainWindow):
         self.drag_position = QPoint()
         self.is_recording = False
         self.is_thinking_or_speaking = False
+
+        # Temporizador para auto-ocultación de la ventana (10 segundos)
+        self.hide_timer = QTimer(self)
+        self.hide_timer.setSingleShot(True)
+        self.hide_timer.timeout.connect(self.hide_avatar)
 
         self.init_window_properties()
         self.init_ui()
@@ -277,7 +284,10 @@ class AvatarWindow(QMainWindow):
         self.whisper = whisper
         self.llama = llama
         self.kokoro = kokoro
-        self.status_label.setText("Listo (Manten Ctrl + J)")
+        self.status_label.setText("Listo (Manten Ctrl + Alt + J)")
+        
+        # Ocultar la ventana automáticamente tras 10 segundos
+        self.hide_timer.start(10000)
         
         # Inicializar el atajo global de teclado con señales Qt para seguridad de hilos
         self.hotkey_listener = HotkeyListener()
@@ -314,7 +324,7 @@ class AvatarWindow(QMainWindow):
         context_menu.addAction(config_action)
         
         exit_action = QAction("Salir", self)
-        exit_action.triggered.connect(self.close)
+        exit_action.triggered.connect(QApplication.quit)
         context_menu.addAction(exit_action)
         
         context_menu.exec(QCursor.pos())
@@ -338,6 +348,13 @@ class AvatarWindow(QMainWindow):
     # --- Pipeline de Grabación y Procesamiento (Walkie-Talkie) ---
     def on_hotkey_pressed(self):
         """Se activa al mantener pulsado el atajo."""
+        # Detener temporizador de ocultación y asegurar visibilidad de la ventana
+        self.hide_timer.stop()
+        if self.isHidden():
+            self.show()
+            self.raise_()
+            self.activateWindow()
+
         # Ignorar si ya estamos ocupados procesando o hablando
         if self.is_recording or self.is_thinking_or_speaking:
             return
@@ -373,7 +390,8 @@ class AvatarWindow(QMainWindow):
         if len(audio_data) < 16000 * 0.5:  # menos de medio segundo
             self.status_label.setText("Grabación demasiado corta.")
             self.is_thinking_or_speaking = False
-            self.status_label.setText("Listo (Manten Ctrl + J)")
+            self.status_label.setText("Listo (Manten Ctrl + Alt + J)")
+            self.hide_timer.start(10000)  # Ocultar tras 10 segundos
             return
 
         # Lanzar el pipeline
@@ -415,9 +433,8 @@ class AvatarWindow(QMainWindow):
         print("Pipeline finalizado correctamente.")
         self.is_thinking_or_speaking = False
         self.set_avatar_image("Callado.png")
-        # Mantener el texto de la respuesta unos segundos, luego volver a Listo
-        # Para simplificar, regresamos directamente a Listo
-        self.status_label.setText("Listo (Manten Ctrl + J)")
+        self.status_label.setText("Listo (Manten Ctrl + Alt + J)")
+        self.hide_timer.start(10000)  # Ocultar tras 10 segundos
 
     @pyqtSlot(str)
     def on_pipeline_error(self, err_msg: str):
@@ -425,9 +442,16 @@ class AvatarWindow(QMainWindow):
         self.is_thinking_or_speaking = False
         self.set_avatar_image("Callado.png")
         self.status_label.setText(f"Error: {err_msg}")
+        self.hide_timer.start(10000)  # Ocultar tras 10 segundos
+
+    def hide_avatar(self):
+        self.status_label.setText("Listo (Manten Ctrl + Alt + J)")
+        self.hide()
 
     def closeEvent(self, event):
         """Limpieza al cerrar la aplicación."""
+        if hasattr(self, 'hide_timer'):
+            self.hide_timer.stop()
         if hasattr(self, 'hotkey_listener'):
             self.hotkey_listener.stop()
         if self.pipeline_worker and self.pipeline_worker.isRunning():
