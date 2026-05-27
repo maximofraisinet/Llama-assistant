@@ -76,21 +76,52 @@ class ModelLoaderThread(QThread):
             if not os.path.isfile(self.config.llm_model_path):
                 raise FileNotFoundError("Ruta del modelo GGUF no válida.")
             
-            # Cargamos el LLM. n_ctx=2048, verbose=False para no saturar los logs
-            llama = Llama(
-                model_path=self.config.llm_model_path,
-                n_ctx=2048,
-                verbose=False
-            )
+            # Cargar LLM con GPU si está configurado, o caer en CPU si falla
+            llama = None
+            if self.config.use_gpu:
+                try:
+                    print("Intentando cargar Llama.cpp en GPU (Nvidia CUDA)...")
+                    llama = Llama(
+                        model_path=self.config.llm_model_path,
+                        n_ctx=2048,
+                        n_gpu_layers=-1,
+                        verbose=False
+                    )
+                    print("Llama.cpp cargado con éxito en la GPU.")
+                except Exception as e:
+                    print(f"Fallo al iniciar Llama con GPU ({e}). Cargando en CPU...")
+                    llama = None
+            
+            if llama is None:
+                llama = Llama(
+                    model_path=self.config.llm_model_path,
+                    n_ctx=2048,
+                    n_gpu_layers=0,
+                    verbose=False
+                )
 
             # 3. Cargar Faster Whisper
             self.status_changed.emit("Cargando Faster-Whisper...")
-            # Usamos el modelo 'base' optimizado para CPU (int8)
-            whisper = WhisperModel(
-                "base",
-                device="cpu",
-                compute_type="int8"
-            )
+            whisper = None
+            if self.config.use_gpu:
+                try:
+                    print("Intentando cargar Faster-Whisper en GPU (CUDA)...")
+                    whisper = WhisperModel(
+                        "base",
+                        device="cuda",
+                        compute_type="float16"
+                    )
+                    print("Faster-Whisper cargado con éxito en la GPU.")
+                except Exception as e:
+                    print(f"Fallo al iniciar Whisper con GPU ({e}). Cargando en CPU...")
+                    whisper = None
+                    
+            if whisper is None:
+                whisper = WhisperModel(
+                    "base",
+                    device="cpu",
+                    compute_type="int8"
+                )
 
             self.status_changed.emit("Modelos cargados con éxito.")
             self.loading_finished.emit(whisper, llama, kokoro)

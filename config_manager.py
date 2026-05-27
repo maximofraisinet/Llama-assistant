@@ -18,7 +18,8 @@ class ConfigManager:
             "llm_model_path": None,
             "kokoro_onnx_path": None,
             "kokoro_voices_path": None,
-            "avatar_position": "bottom_right"
+            "avatar_position": "bottom_right",
+            "use_gpu": False
         }
         self.load()
 
@@ -175,3 +176,11 @@ class ConfigManager:
     @avatar_position.setter
     def avatar_position(self, val):
         self.config_data["avatar_position"] = val
+
+    @property
+    def use_gpu(self):
+        return self.config_data.get("use_gpu", False)
+
+    @use_gpu.setter
+    def use_gpu(self, val):
+        self.config_data["use_gpu"] = bool(val)

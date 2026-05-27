@@ -2,7 +2,7 @@ import os
 import sounddevice as sd
 from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QComboBox, 
-    QLineEdit, QPushButton, QFileDialog, QMessageBox, QGroupBox, QFormLayout
+    QLineEdit, QPushButton, QFileDialog, QMessageBox, QGroupBox, QFormLayout, QCheckBox
 )
 from PyQt6.QtCore import Qt
 
@@ -35,9 +35,9 @@ class SettingsDialog(QDialog):
         audio_layout.addRow(QLabel("Dispositivo de Salida (Altavoces):"), self.output_combo)
         main_layout.addWidget(audio_group)
 
-        # 1.5. Grupo de Posicionamiento
-        pos_group = QGroupBox("Ubicación del Avatar")
-        pos_layout = QFormLayout(pos_group)
+        # 1.5. Grupo de Preferencias Generales
+        pref_group = QGroupBox("Preferencias Generales")
+        pref_layout = QFormLayout(pref_group)
         self.position_combo = QComboBox()
         self.position_combo.addItem("Esquina Inferior Derecha", "bottom_right")
         self.position_combo.addItem("Esquina Inferior Izquierda", "bottom_left")
@@ -45,14 +45,20 @@ class SettingsDialog(QDialog):
         self.position_combo.addItem("Esquina Superior Izquierda", "top_left")
         self.position_combo.addItem("Centro de la Pantalla", "center")
         
-        # Seleccionar posición guardada
+        # Autorrellenar posición guardada
         saved_pos = self.config_manager.avatar_position
         pos_idx = self.position_combo.findData(saved_pos)
         if pos_idx != -1:
             self.position_combo.setCurrentIndex(pos_idx)
             
-        pos_layout.addRow(QLabel("Posición Inicial en Pantalla:"), self.position_combo)
-        main_layout.addWidget(pos_group)
+        pref_layout.addRow(QLabel("Posición Inicial del Avatar:"), self.position_combo)
+        
+        # Checkbox de aceleración por GPU Nvidia CUDA
+        self.gpu_checkbox = QCheckBox("Usar aceleración gráfica por hardware (Nvidia CUDA / GPU)")
+        self.gpu_checkbox.setChecked(self.config_manager.use_gpu)
+        pref_layout.addRow(self.gpu_checkbox)
+        
+        main_layout.addWidget(pref_group)
 
         # 2. Grupo de Modelos de IA
         models_group = QGroupBox("Rutas de Modelos Locales")
@@ -213,14 +219,16 @@ class SettingsDialog(QDialog):
             )
             return
 
-        # Obtener valores seleccionados de los combos (nombres de dispositivo y posición)
+        # Obtener valores seleccionados de los combos (nombres de dispositivo, posición y GPU)
         input_name = self.input_combo.currentData()
         output_name = self.output_combo.currentData()
         pos_name = self.position_combo.currentData()
+        use_gpu_val = self.gpu_checkbox.isChecked()
         
         self.config_manager.input_device_name = input_name
         self.config_manager.output_device_name = output_name
         self.config_manager.avatar_position = pos_name
+        self.config_manager.use_gpu = use_gpu_val
         self.config_manager.llm_model_path = llm_path
         self.config_manager.kokoro_onnx_path = onnx_path
         self.config_manager.kokoro_voices_path = voices_path
