@@ -102,6 +102,18 @@ class ModelLoaderThread(QThread):
                     verbose=False
                 )
 
+            # Desactivar razonamiento (thinking/reasoning off) para que no genere tokens de pensamiento
+            if llama is not None:
+                import llama_cpp.llama_chat_format
+                base_handler = (
+                    llama.chat_handler
+                    or llama._chat_handlers.get(llama.chat_format)
+                    or llama_cpp.llama_chat_format.get_chat_completion_handler(llama.chat_format)
+                )
+                def chat_handler_with_thinking_disabled(*args, **kwargs):
+                    return base_handler(*args, enable_thinking=False, **kwargs)
+                llama.chat_handler = chat_handler_with_thinking_disabled
+
             # 3. Cargar Faster Whisper
             self.status_changed.emit("Cargando Faster-Whisper...")
             whisper = None
