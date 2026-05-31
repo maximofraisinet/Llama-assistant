@@ -46,6 +46,50 @@ def get_hardware_info() -> str:
         return f"Linux System (Error al obtener detalles: {e})"
 
 
+def split_text_for_tts(text: str, max_words: int = 80) -> list[str]:
+    """
+    Divide un texto largo en fragmentos más pequeños basándose en comas, comillas,
+    puntos y comas, de modo que cada fragmento tenga como máximo `max_words` palabras.
+    Esto previene que Kokoro lance errores de secuencia demasiado larga (límite de 510 phonemes).
+    """
+    words = text.split()
+    if len(words) <= max_words:
+        return [text]
+    
+    chunks = []
+    current_chunk = []
+    
+    # Dividir el texto usando signos de puntuación de cláusulas pero conservándolos
+    sub_clauses = re.split(r'(?<=[,;:\-])\s+', text)
+    
+    for clause in sub_clauses:
+        clause_words = clause.split()
+        if not clause_words:
+            continue
+            
+        # Si añadir esta cláusula excede el máximo de palabras
+        if len(current_chunk) + len(clause_words) > max_words:
+            # Añadir el fragmento acumulado actual
+            if current_chunk:
+                chunks.append(" ".join(current_chunk))
+                current_chunk = []
+            
+            # Si una sola cláusula ya es más grande que el límite, la dividimos por palabras
+            if len(clause_words) > max_words:
+                for i in range(0, len(clause_words), max_words):
+                    sub_clause = clause_words[i:i+max_words]
+                    chunks.append(" ".join(sub_clause))
+            else:
+                current_chunk = clause_words
+        else:
+            current_chunk.extend(clause_words)
+            
+    if current_chunk:
+        chunks.append(" ".join(current_chunk))
+        
+    return chunks
+
+
 class ModelLoaderThread(QThread):
     """
     Hilo secundario para inicializar todos los modelos de IA de forma asíncrona
@@ -244,7 +288,7 @@ class SpeechPipelineWorker(QThread):
             response_stream = self.llama.create_chat_completion(
                 messages=messages,
                 stream=True,
-                max_tokens=150,
+                max_tokens=512,
                 temperature=0.7
             )
 
@@ -398,7 +442,13 @@ class SpeechPipelineWorker(QThread):
             clean_text = re.sub(r'\s+', ' ', clean_text)
             clean_text = re.sub(r'\s+([.,;:!?])', r'\1', clean_text).strip()
             
-            print(f"Sintetizando: '{clean_text}' (Original: '{text}')")
+            if not clean_text:
+                return
+
+            # Dividir en fragmentos seguros para Kokoro
+            chunks = split_text_for_tts(clean_text, max_words=80)
+            
+            print(f"Sintetizando: '{clean_text}' (Original: '{text}') en {len(chunks)} fragmento(s)")
             voice = self.config.kokoro_voice or "em_alex"
             
             # Determinar el idioma del modelo Kokoro según el prefijo de la voz
@@ -409,10 +459,14 @@ class SpeechPipelineWorker(QThread):
             else:
                 lang = "en-us"
                 
-            samples, sample_rate = self.kokoro.create(clean_text, voice=voice, lang=lang)
-            # Pasamos clean_text a la cola para que la animación de Lip-Sync y la reproducción
-            # se sincronicen con el texto pronunciado real.
-            self.speech_queue.put((samples, clean_text))
+            for chunk in chunks:
+                if not chunk.strip():
+                    continue
+                print(f"  Procesando fragmento para Kokoro: '{chunk}'")
+                samples, sample_rate = self.kokoro.create(chunk, voice=voice, lang=lang)
+                # Pasamos el fragmento a la cola para que la animación de Lip-Sync y la reproducción
+                # se sincronicen con el texto pronunciado real.
+                self.speech_queue.put((samples, chunk))
         except Exception as e:
             print(f"Error al sintetizar con Kokoro: {e}")
 

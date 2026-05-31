@@ -1,6 +1,6 @@
 import os
 import numpy as np
-from PyQt6.QtWidgets import QMainWindow, QWidget, QLabel, QVBoxLayout, QMenu, QMessageBox, QApplication
+from PyQt6.QtWidgets import QMainWindow, QWidget, QLabel, QVBoxLayout, QMenu, QMessageBox, QApplication, QScrollArea
 from PyQt6.QtGui import QPixmap, QCursor, QAction, QPainter
 from PyQt6.QtCore import Qt, QPoint, pyqtSlot, QObject, pyqtSignal, QTimer
 
@@ -180,7 +180,7 @@ class AvatarWindow(QMainWindow):
         self.avatar_label.setFixedSize(250, 250)
         layout.addWidget(self.avatar_label)
 
-        # Burbuja de texto (Status y transcripción/respuestas)
+        # Burbuja de texto (Status y transcripción/respuestas) dentro de un ScrollArea
         self.status_label = QLabel("Cargando...", self)
         self.status_label.setWordWrap(True)
         self.status_label.setTextFormat(Qt.TextFormat.MarkdownText)
@@ -194,7 +194,35 @@ class AvatarWindow(QMainWindow):
             font-family: 'Outfit', 'Inter', 'Segoe UI', sans-serif;
             padding: 8px;
         """)
-        layout.addWidget(self.status_label)
+
+        self.scroll_area = QScrollArea(self)
+        self.scroll_area.setWidgetResizable(True)
+        self.scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self.scroll_area.setWidget(self.status_label)
+        self.scroll_area.setStyleSheet("""
+            QScrollArea {
+                background: transparent;
+                border: none;
+            }
+            QScrollBar:vertical {
+                border: none;
+                background: rgba(33, 33, 44, 100);
+                width: 6px;
+                margin: 0px 0px 0px 0px;
+                border-radius: 3px;
+            }
+            QScrollBar::handle:vertical {
+                background: rgba(255, 60, 60, 150);
+                min-height: 20px;
+                border-radius: 3px;
+            }
+            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+                border: none;
+                background: none;
+            }
+        """)
+        layout.addWidget(self.scroll_area)
 
     def preload_pixmaps(self):
         """Pre-carga en memoria todos los cuadros del avatar, unificando su tamaño al canvas máximo."""
@@ -431,6 +459,10 @@ class AvatarWindow(QMainWindow):
         # Reemplazar etiquetas <cmd> y </cmd> por bloques de código Markdown
         display_text = self.llm_response_text.replace("<cmd>", " `").replace("</cmd>", "` ")
         self.status_label.setText(display_text)
+
+        # Auto-scroll al fondo para ver los nuevos tokens
+        scrollbar = self.scroll_area.verticalScrollBar()
+        scrollbar.setValue(scrollbar.maximum())
 
     @pyqtSlot()
     def on_pipeline_finished(self):
