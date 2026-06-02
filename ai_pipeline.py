@@ -205,42 +205,48 @@ class SpeechPipelineWorker(QThread):
     # Señal para actualizar la boca desde el reproductor en el hilo principal
     change_mouth_image = pyqtSignal(str)
 
-    def __init__(self, whisper, llama, kokoro, audio_data, config):
+    def __init__(self, whisper, llama, kokoro, audio_data, config, text_prompt=None):
         super().__init__()
         self.whisper = whisper
         self.llama = llama
         self.kokoro = kokoro
         self.audio_data = audio_data
         self.config = config
+        self.text_prompt = text_prompt
         self.speech_queue = queue.Queue()
         self.is_running = True
         self.current_player = None
 
     def run(self):
         try:
-            if self.audio_data is None or len(self.audio_data) == 0:
-                self.pipeline_finished.emit()
-                return
-
-            # --- 1. STT (Whisper) ---
-            self.status_changed.emit("Transcribiendo voz...")
+            # --- 1. Obtener Transcripción (Whisper STT o Prompt de Texto directo) ---
             voice = self.config.kokoro_voice or "em_alex"
             is_spanish = voice.startswith("ef") or voice.startswith("em")
             transcribe_lang = "es" if is_spanish else "en"
 
-            segments, info = self.whisper.transcribe(
-                self.audio_data, 
-                language=transcribe_lang,
-                beam_size=5
-            )
-            
-            transcription = " ".join([segment.text for segment in segments]).strip()
-            if not transcription:
-                self.status_changed.emit("No se detectó voz clara." if is_spanish else "No clear speech detected.")
-                self.pipeline_finished.emit()
-                return
+            if self.text_prompt is not None:
+                transcription = self.text_prompt.strip()
+                self.transcription_done.emit(transcription)
+            else:
+                if self.audio_data is None or not isinstance(self.audio_data, np.ndarray) or self.audio_data.size == 0:
+                    print("SpeechPipelineWorker.run: Sin datos de audio o no es un array de numpy. Omitiendo Whisper.")
+                    self.pipeline_finished.emit()
+                    return
+
+                self.status_changed.emit("Transcribiendo voz...")
+                segments, info = self.whisper.transcribe(
+                    self.audio_data, 
+                    language=transcribe_lang,
+                    beam_size=5
+                )
                 
-            self.transcription_done.emit(transcription)
+                transcription = " ".join([segment.text for segment in segments]).strip()
+                if not transcription:
+                    self.status_changed.emit("No se detectó voz clara." if is_spanish else "No clear speech detected.")
+                    self.pipeline_finished.emit()
+                    return
+                    
+                self.transcription_done.emit(transcription)
 
             # --- 2. Preparar Prompt y Llamada a LLM ---
             self.status_changed.emit("Pensando respuesta..." if is_spanish else "Thinking response...")

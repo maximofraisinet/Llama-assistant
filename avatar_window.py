@@ -1,6 +1,6 @@
 import os
 import numpy as np
-from PyQt6.QtWidgets import QMainWindow, QWidget, QLabel, QVBoxLayout, QMenu, QMessageBox, QApplication, QScrollArea
+from PyQt6.QtWidgets import QMainWindow, QWidget, QLabel, QVBoxLayout, QHBoxLayout, QMenu, QMessageBox, QApplication, QScrollArea, QDialog, QLineEdit, QPushButton
 from PyQt6.QtGui import QPixmap, QCursor, QAction, QPainter
 from PyQt6.QtCore import Qt, QPoint, pyqtSlot, QObject, pyqtSignal, QTimer
 
@@ -24,12 +24,18 @@ class HotkeyListener(QObject):
     """
     pressed = pyqtSignal()
     released = pyqtSignal()
+    text_trigger = pyqtSignal()  # Señal para atajo de texto
 
     def __init__(self):
         super().__init__()
         self.active_keys = set()
         self.is_triggered = False
         self.listener = None
+
+    def clear_keys(self):
+        self.active_keys.clear()
+        self.is_triggered = False
+        print("Atajos de teclado reseteados (limpieza de teclas stuck).")
 
     def start(self):
         if not keyboard:
@@ -67,11 +73,14 @@ class HotkeyListener(QObject):
         name = self._get_key_name(key)
         if name:
             self.active_keys.add(name)
-            # Combinación Ctrl + Alt + J
+            # Combinación Ctrl + Alt + J (Voz)
             if "ctrl" in self.active_keys and "alt" in self.active_keys and "j" in self.active_keys:
                 if not self.is_triggered:
                     self.is_triggered = True
                     self.pressed.emit()
+            # Combinación Ctrl + Alt + K (Texto)
+            elif "ctrl" in self.active_keys and "alt" in self.active_keys and "k" in self.active_keys:
+                self.text_trigger.emit()
 
     def on_release(self, key):
         name = self._get_key_name(key)
@@ -83,6 +92,135 @@ class HotkeyListener(QObject):
             if self.is_triggered and (name in ("ctrl", "alt", "j")):
                 self.is_triggered = False
                 self.released.emit()
+
+
+class TextInputWindow(QDialog):
+    """
+    Ventana flotante y semitransparente para escribir o pegar un prompt
+    directamente al asistente virtual.
+    """
+    submitted = pyqtSignal(str)
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Enviar Prompt al Asistente")
+        self.setWindowFlags(
+            Qt.WindowType.FramelessWindowHint |
+            Qt.WindowType.WindowStaysOnTopHint |
+            Qt.WindowType.Tool
+        )
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
+        self.init_ui()
+
+    def init_ui(self):
+        # Widget contenedor principal para aplicar estilo
+        container = QWidget(self)
+        container.setStyleSheet("""
+            QWidget {
+                background-color: rgba(33, 33, 44, 235);
+                border: 1px solid rgba(255, 60, 60, 120);
+                border-radius: 12px;
+            }
+            QLabel {
+                color: #ff5555;
+                font-size: 12px;
+                font-weight: bold;
+                font-family: 'Outfit', 'Inter', sans-serif;
+                border: none;
+                background: transparent;
+            }
+            QLineEdit {
+                background-color: rgba(20, 20, 30, 200);
+                border: 1px solid rgba(255, 255, 255, 40);
+                border-radius: 6px;
+                color: #ffffff;
+                font-size: 12px;
+                font-family: 'Outfit', 'Inter', sans-serif;
+                padding: 6px 10px;
+                border: none;
+            }
+            QLineEdit:focus {
+                border: 1px solid rgba(255, 60, 60, 150);
+            }
+            QPushButton {
+                background-color: rgba(255, 60, 60, 180);
+                border: none;
+                border-radius: 6px;
+                color: white;
+                font-size: 11px;
+                font-weight: bold;
+                font-family: 'Outfit', 'Inter', sans-serif;
+                padding: 6px 12px;
+            }
+            QPushButton:hover {
+                background-color: rgba(255, 80, 80, 220);
+            }
+            QPushButton#cancel_btn {
+                background-color: rgba(255, 255, 255, 20);
+                color: #e0e0e0;
+            }
+            QPushButton#cancel_btn:hover {
+                background-color: rgba(255, 255, 255, 40);
+            }
+        """)
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        
+        inner_layout = QVBoxLayout(container)
+        inner_layout.setContentsMargins(15, 15, 15, 15)
+        inner_layout.setSpacing(10)
+
+        label = QLabel("Pregunta al Asistente:")
+        inner_layout.addWidget(label)
+
+        self.input_field = QLineEdit()
+        self.input_field.setPlaceholderText("Escribe o pega tu consulta aquí...")
+        inner_layout.addWidget(self.input_field)
+
+        btn_layout = QHBoxLayout()
+        cancel_btn = QPushButton("Cancelar")
+        cancel_btn.setObjectName("cancel_btn")
+        cancel_btn.clicked.connect(self.reject)
+        
+        submit_btn = QPushButton("Enviar")
+        submit_btn.clicked.connect(self.on_submit)
+        
+        btn_layout.addStretch()
+        btn_layout.addWidget(cancel_btn)
+        btn_layout.addWidget(submit_btn)
+        inner_layout.addLayout(btn_layout)
+
+        layout.addWidget(container)
+        
+        # Conectar Enter en el QLineEdit
+        self.input_field.returnPressed.connect(self.on_submit)
+        
+        self.resize(400, 120)
+        self.center_on_screen()
+
+    def center_on_screen(self):
+        screen = QApplication.primaryScreen().availableGeometry()
+        self.move((screen.width() - self.width()) // 2, (screen.height() - self.height()) // 2)
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        self.input_field.clear()
+        self.input_field.setFocus()
+
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key.Key_Escape:
+            self.reject()
+        else:
+            super().keyPressEvent(event)
+
+    def on_submit(self):
+        text = self.input_field.text().strip()
+        if text:
+            self.submitted.emit(text)
+            self.accept()
+        else:
+            self.reject()
 
 
 class AvatarWindow(QMainWindow):
@@ -322,6 +460,7 @@ class AvatarWindow(QMainWindow):
         self.hotkey_listener = HotkeyListener()
         self.hotkey_listener.pressed.connect(self.on_hotkey_pressed)
         self.hotkey_listener.released.connect(self.on_hotkey_released)
+        self.hotkey_listener.text_trigger.connect(self.on_text_hotkey_triggered)
         self.hotkey_listener.start()
 
     @pyqtSlot(str)
@@ -373,6 +512,91 @@ class AvatarWindow(QMainWindow):
             # Si cancela, reanudar escucha de teclado
             if hasattr(self, 'hotkey_listener'):
                 self.hotkey_listener.start()
+
+    @pyqtSlot()
+    def on_text_hotkey_triggered(self):
+        """Se activa al pulsar Ctrl + Alt + K."""
+        print("Atajo Ctrl + Alt + K detectado. Abriendo ventana de texto.")
+        # Detener temporizador de ocultación y asegurar visibilidad de la ventana del avatar
+        self.hide_timer.stop()
+        if self.isHidden():
+            self.show()
+            self.raise_()
+            self.activateWindow()
+
+        # Si ya estamos grabando, no hacer nada
+        if self.is_recording:
+            return
+
+        # Limpiar atajos presionados para evitar estados bloqueados
+        if hasattr(self, 'hotkey_listener') and self.hotkey_listener:
+            self.hotkey_listener.clear_keys()
+
+        # Interrumpir habla si está activa
+        if self.is_thinking_or_speaking:
+            print("Interrumpiendo reproducción en curso por solicitud de prompt de texto.")
+            if self.pipeline_worker and self.pipeline_worker.isRunning():
+                try:
+                    self.pipeline_worker.status_changed.disconnect()
+                    self.pipeline_worker.transcription_done.disconnect()
+                    self.pipeline_worker.llm_token_received.disconnect()
+                    self.pipeline_worker.pipeline_finished.disconnect()
+                    self.pipeline_worker.pipeline_error.disconnect()
+                    self.pipeline_worker.change_mouth_image.disconnect()
+                except Exception:
+                    pass
+                self.pipeline_worker.stop()
+            self.is_thinking_or_speaking = False
+            self.set_avatar_image("Callado.png")
+            self.status_label.setText("Listo (Manten Ctrl + Alt + J)")
+
+        # Abrir la ventana de prompt de texto
+        if not hasattr(self, 'text_input_window'):
+            self.text_input_window = TextInputWindow(self)
+            self.text_input_window.submitted.connect(self.on_text_prompt_submitted)
+            self.text_input_window.rejected.connect(self.on_text_prompt_rejected)
+        
+        self.text_input_window.show()
+        self.text_input_window.raise_()
+        self.text_input_window.activateWindow()
+
+    @pyqtSlot()
+    def on_text_prompt_rejected(self):
+        """Se activa si el usuario cancela la ventana de texto."""
+        print("Ventana de prompt cancelada - Iniciando temporizador de ocultación (10s).")
+        if hasattr(self, 'hotkey_listener') and self.hotkey_listener:
+            self.hotkey_listener.clear_keys()
+        self.hide_timer.start(10000)  # Ocultar tras 10 segundos
+
+    @pyqtSlot(str)
+    def on_text_prompt_submitted(self, prompt_text: str):
+        """Se activa al enviar el prompt desde la ventana de texto."""
+        print(f"Prompt de texto enviado: {prompt_text}")
+        if hasattr(self, 'hotkey_listener') and self.hotkey_listener:
+            self.hotkey_listener.clear_keys()
+        self.is_thinking_or_speaking = True
+        self.set_avatar_image("Callado.png")
+        self.status_label.setText("Procesando...")
+
+        # Lanzar el pipeline pasándole directamente el prompt_text
+        self.pipeline_worker = SpeechPipelineWorker(
+            whisper=self.whisper,
+            llama=self.llama,
+            kokoro=self.kokoro,
+            audio_data=None,
+            config=self.config_manager,
+            text_prompt=prompt_text
+        )
+        
+        # Conectar señales
+        self.pipeline_worker.status_changed.connect(self.update_status)
+        self.pipeline_worker.transcription_done.connect(self.on_transcription_done)
+        self.pipeline_worker.llm_token_received.connect(self.on_llm_token)
+        self.pipeline_worker.change_mouth_image.connect(self.set_avatar_image)
+        self.pipeline_worker.pipeline_finished.connect(self.on_pipeline_finished)
+        self.pipeline_worker.pipeline_error.connect(self.on_pipeline_error)
+        
+        self.pipeline_worker.start()
 
     # --- Pipeline de Grabación y Procesamiento (Walkie-Talkie) ---
     def on_hotkey_pressed(self):
@@ -494,6 +718,7 @@ class AvatarWindow(QMainWindow):
         self.hide_timer.start(10000)  # Ocultar tras 10 segundos
 
     def hide_avatar(self):
+        print("hide_avatar llamado - Ocultando ventana del avatar.")
         self.status_label.setText("Listo (Manten Ctrl + Alt + J)")
         self.hide()
 
