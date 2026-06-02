@@ -384,18 +384,31 @@ class AvatarWindow(QMainWindow):
             self.raise_()
             self.activateWindow()
 
-        # Ignorar si ya estamos ocupados procesando o hablando
-        if self.is_recording or self.is_thinking_or_speaking:
+        # Ignorar si ya estamos ocupados grabando (pero NO si estamos pensando o hablando)
+        if self.is_recording:
             return
+
+        # Interrumpir el pipeline de habla si está en curso
+        if self.is_thinking_or_speaking:
+            print("Interrumpiendo reproducción en curso para escuchar de nuevo.")
+            if self.pipeline_worker and self.pipeline_worker.isRunning():
+                try:
+                    # Desconectar señales de GUI para evitar interferencias
+                    self.pipeline_worker.status_changed.disconnect()
+                    self.pipeline_worker.transcription_done.disconnect()
+                    self.pipeline_worker.llm_token_received.disconnect()
+                    self.pipeline_worker.pipeline_finished.disconnect()
+                    self.pipeline_worker.pipeline_error.disconnect()
+                    self.pipeline_worker.change_mouth_image.disconnect()
+                except Exception:
+                    pass
+                self.pipeline_worker.stop()
+            self.is_thinking_or_speaking = False
 
         print("Atajo presionado - Iniciando grabación.")
         self.is_recording = True
         self.set_avatar_image("Escucha.png")
         self.status_label.setText("Escuchando...")
-
-        # Detener cualquier reproducción en curso si el pipeline estaba corriendo
-        if self.pipeline_worker and self.pipeline_worker.isRunning():
-            self.pipeline_worker.stop()
 
         # Iniciar grabación
         self.audio_recorder = AudioRecorder(device_index=self.config_manager.input_device_index)

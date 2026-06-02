@@ -195,11 +195,12 @@ class AudioPlayer(QThread):
             if elapsed >= total_duration:
                 break
 
-        # Esperar a que sounddevice termine completamente por si acaso
-        try:
-            sd.wait()
-        except Exception:
-            pass
+        # Esperar a que sounddevice termine completamente por si acaso si no fue interrumpido
+        if self.is_playing:
+            try:
+                sd.wait()
+            except Exception:
+                pass
 
         # Volver al estado Callado al terminar
         self.change_mouth_image.emit("Callado.png")
@@ -207,13 +208,12 @@ class AudioPlayer(QThread):
         self.playback_finished.emit()
 
     def stop(self):
-        """Detiene la reproducción y el hilo."""
+        """Detiene la reproducción y el hilo de forma asíncrona."""
         self.is_playing = False
         try:
             sd.stop()
         except Exception:
             pass
-        self.wait()
 
     def _tokenize_text(self, text: str):
         """
