@@ -246,15 +246,26 @@ class AvatarWindow(QMainWindow):
         self.is_recording = False
         self.is_thinking_or_speaking = False
 
+        # Estado del avatar (matriz de animación)
+        self.eyes_state = "open"
+        self.mouth_state = "closed"
+        self.avatar_status = "quiet"
+
         # Temporizador para auto-ocultación de la ventana (10 segundos)
         self.hide_timer = QTimer(self)
         self.hide_timer.setSingleShot(True)
         self.hide_timer.timeout.connect(self.hide_avatar)
 
+        # Temporizador para parpadeo aleatorio
+        self.blink_timer = QTimer(self)
+        self.blink_timer.setSingleShot(True)
+        self.blink_timer.timeout.connect(self.trigger_blink)
+
         self.init_window_properties()
         self.init_ui()
         self.preload_pixmaps()
-        self.set_avatar_image("Callado.png")
+        self.update_avatar_display()
+        self.schedule_next_blink()
 
         # Iniciar carga de modelos en segundo plano
         self.start_model_loading()
@@ -365,7 +376,7 @@ class AvatarWindow(QMainWindow):
     def preload_pixmaps(self):
         """Pre-carga en memoria todos los cuadros del avatar, unificando su tamaño al canvas máximo."""
         self.pixmaps = {}
-        images = ["Callado.png", "Escucha.png", "CH-I-S.png", "L-R.png", "M-B-V-F-P.png", "O.png", "R.png"]
+        images = ["quiet.png", "cm-ce.png", "om-oe.png", "om-ce.png", "listen.png"]
         
         raw_pixmaps = {}
         max_w = 0
@@ -404,27 +415,25 @@ class AvatarWindow(QMainWindow):
             self.pixmaps[img] = unified_pixmap
 
     def set_avatar_image(self, img_name: str):
-        """Actualiza la imagen en pantalla a partir del diccionario precargado, con rebote de habla."""
+        """Actualiza la imagen en pantalla a partir del diccionario precargado."""
         pixmap = self.pixmaps.get(img_name)
         if not pixmap:
-            # Si no está cargada (ej. cargando por primera vez), intentar cargarla
+            # Si no está cargada (ej. cargando por primera vez), intentar cargarla o usar quiet.png como fallback
             path = os.path.join(self.avatar_dir, img_name)
             if os.path.exists(path):
                 pixmap = QPixmap(path)
                 self.pixmaps[img_name] = pixmap
+            else:
+                pixmap = self.pixmaps.get("quiet.png")
+                if not pixmap:
+                    path_quiet = os.path.join(self.avatar_dir, "quiet.png")
+                    if os.path.exists(path_quiet):
+                        pixmap = QPixmap(path_quiet)
+                        self.pixmaps["quiet.png"] = pixmap
 
         if pixmap:
-            # Aplicar un rebote/movimiento vertical sutil si está hablando
-            offset_y = 0
-            if self.is_thinking_or_speaking and img_name not in ("Callado.png", "Escucha.png"):
-                if not hasattr(self, '_bounce_state'):
-                    self._bounce_state = 0
-                self._bounce_state = (self._bounce_state + 1) % 4
-                if self._bounce_state in (1, 2):
-                    offset_y = -6  # Subir 6px
-            
-            # Aplicar márgenes para simular rebote
-            self.avatar_label.setContentsMargins(0, 6 + offset_y, 0, 6 - offset_y)
+            # Mantener márgenes estables (6px arriba/abajo) para evitar saltos
+            self.avatar_label.setContentsMargins(0, 6, 0, 6)
 
             scaled = pixmap.scaled(
                 self.avatar_label.width() - 12,  # Dejar espacio para márgenes
@@ -433,6 +442,51 @@ class AvatarWindow(QMainWindow):
                 Qt.TransformationMode.SmoothTransformation
             )
             self.avatar_label.setPixmap(scaled)
+
+    def update_avatar_display(self):
+        """Actualiza el avatar en pantalla según el estado actual (matriz de estados)."""
+        if self.avatar_status == "listening":
+            img_name = "listen.png"
+        else:
+            if self.mouth_state == "closed":
+                if self.eyes_state == "closed":
+                    img_name = "cm-ce.png"
+                else:
+                    img_name = "quiet.png"
+            else: # open
+                if self.eyes_state == "closed":
+                    img_name = "om-ce.png"
+                else:
+                    img_name = "om-oe.png"
+        self.set_avatar_image(img_name)
+
+    def schedule_next_blink(self):
+        import random
+        # Parpadeo aleatorio cada 2.5 a 5.5 segundos
+        interval = random.randint(2500, 5500)
+        self.blink_timer.start(interval)
+
+    def trigger_blink(self):
+        if self.avatar_status in ("quiet", "listening"):
+            self.eyes_state = "open"
+            self.schedule_next_blink()
+            return
+
+        self.eyes_state = "closed"
+        self.update_avatar_display()
+        QTimer.singleShot(150, self.finish_blink)
+
+    def finish_blink(self):
+        self.eyes_state = "open"
+        self.update_avatar_display()
+        self.schedule_next_blink()
+
+    @pyqtSlot(str)
+    def on_mouth_state_changed(self, state: str):
+        """Actualiza el estado de la boca y redibuja el avatar."""
+        if state in ("open", "closed"):
+            self.mouth_state = state
+            self.update_avatar_display()
 
     # --- Carga de Modelos ---
     def start_model_loading(self):
@@ -445,6 +499,9 @@ class AvatarWindow(QMainWindow):
     @pyqtSlot(str)
     def update_status(self, text: str):
         self.status_label.setText(text)
+        if text.startswith("Hablando..."):
+            self.avatar_status = "speaking"
+            self.update_avatar_display()
 
     @pyqtSlot(object, object, object)
     def on_models_loaded(self, whisper, llama, kokoro):
@@ -547,7 +604,10 @@ class AvatarWindow(QMainWindow):
                     pass
                 self.pipeline_worker.stop()
             self.is_thinking_or_speaking = False
-            self.set_avatar_image("Callado.png")
+            self.avatar_status = "quiet"
+            self.mouth_state = "closed"
+            self.eyes_state = "open"
+            self.update_avatar_display()
             self.status_label.setText("Listo (Manten Ctrl + Alt + J)")
 
         # Abrir la ventana de prompt de texto
@@ -575,7 +635,9 @@ class AvatarWindow(QMainWindow):
         if hasattr(self, 'hotkey_listener') and self.hotkey_listener:
             self.hotkey_listener.clear_keys()
         self.is_thinking_or_speaking = True
-        self.set_avatar_image("Callado.png")
+        self.avatar_status = "thinking"
+        self.mouth_state = "closed"
+        self.update_avatar_display()
         self.status_label.setText("Procesando...")
 
         # Lanzar el pipeline pasándole directamente el prompt_text
@@ -592,7 +654,7 @@ class AvatarWindow(QMainWindow):
         self.pipeline_worker.status_changed.connect(self.update_status)
         self.pipeline_worker.transcription_done.connect(self.on_transcription_done)
         self.pipeline_worker.llm_token_received.connect(self.on_llm_token)
-        self.pipeline_worker.change_mouth_image.connect(self.set_avatar_image)
+        self.pipeline_worker.change_mouth_image.connect(self.on_mouth_state_changed)
         self.pipeline_worker.pipeline_finished.connect(self.on_pipeline_finished)
         self.pipeline_worker.pipeline_error.connect(self.on_pipeline_error)
         
@@ -631,7 +693,9 @@ class AvatarWindow(QMainWindow):
 
         print("Atajo presionado - Iniciando grabación.")
         self.is_recording = True
-        self.set_avatar_image("Escucha.png")
+        self.avatar_status = "listening"
+        self.mouth_state = "closed"
+        self.update_avatar_display()
         self.status_label.setText("Escuchando...")
 
         # Iniciar grabación
@@ -646,7 +710,9 @@ class AvatarWindow(QMainWindow):
         print("Atajo soltado - Procesando audio.")
         self.is_recording = False
         self.is_thinking_or_speaking = True
-        self.set_avatar_image("Callado.png")
+        self.avatar_status = "thinking"
+        self.mouth_state = "closed"
+        self.update_avatar_display()
         self.status_label.setText("Procesando...")
 
         # Detener la grabación y obtener los datos
@@ -656,6 +722,9 @@ class AvatarWindow(QMainWindow):
         if len(audio_data) < 16000 * 0.5:  # menos de medio segundo
             self.status_label.setText("Grabación demasiado corta.")
             self.is_thinking_or_speaking = False
+            self.avatar_status = "quiet"
+            self.mouth_state = "closed"
+            self.update_avatar_display()
             self.status_label.setText("Listo (Manten Ctrl + Alt + J)")
             self.hide_timer.start(10000)  # Ocultar tras 10 segundos
             return
@@ -673,7 +742,7 @@ class AvatarWindow(QMainWindow):
         self.pipeline_worker.status_changed.connect(self.update_status)
         self.pipeline_worker.transcription_done.connect(self.on_transcription_done)
         self.pipeline_worker.llm_token_received.connect(self.on_llm_token)
-        self.pipeline_worker.change_mouth_image.connect(self.set_avatar_image)
+        self.pipeline_worker.change_mouth_image.connect(self.on_mouth_state_changed)
         self.pipeline_worker.pipeline_finished.connect(self.on_pipeline_finished)
         self.pipeline_worker.pipeline_error.connect(self.on_pipeline_error)
         
@@ -705,7 +774,10 @@ class AvatarWindow(QMainWindow):
     def on_pipeline_finished(self):
         print("Pipeline finalizado correctamente.")
         self.is_thinking_or_speaking = False
-        self.set_avatar_image("Callado.png")
+        self.avatar_status = "quiet"
+        self.mouth_state = "closed"
+        self.eyes_state = "open"
+        self.update_avatar_display()
         self.status_label.setText("Listo (Manten Ctrl + Alt + J)")
         self.hide_timer.start(10000)  # Ocultar tras 10 segundos
 
@@ -713,7 +785,10 @@ class AvatarWindow(QMainWindow):
     def on_pipeline_error(self, err_msg: str):
         print(f"Error en pipeline: {err_msg}")
         self.is_thinking_or_speaking = False
-        self.set_avatar_image("Callado.png")
+        self.avatar_status = "quiet"
+        self.mouth_state = "closed"
+        self.eyes_state = "open"
+        self.update_avatar_display()
         self.status_label.setText(f"Error: {err_msg}")
         self.hide_timer.start(10000)  # Ocultar tras 10 segundos
 

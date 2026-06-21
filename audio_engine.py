@@ -203,7 +203,7 @@ class AudioPlayer(QThread):
                 pass
 
         # Volver al estado Callado al terminar
-        self.change_mouth_image.emit("Callado.png")
+        self.change_mouth_image.emit("closed")
         self.is_playing = False
         self.playback_finished.emit()
 
@@ -234,30 +234,16 @@ class AudioPlayer(QThread):
 
     def _get_image_for_token(self, token: str) -> str:
         """
-        Mapea un token de texto (letra o dígrafo) a una imagen de la boca.
+        Mapea un token de texto (letra o dígrafo) a un estado de la boca ('open' o 'closed').
         """
-        # Vocales abiertas y de gran apertura (A, E, S, CH) -> Alternar dinámicamente entre CH-I-S.png y R.png
-        if token in ('a', 'e', 's', 'ch'):
-            self._toggle_state = not self._toggle_state
-            return "CH-I-S.png" if self._toggle_state else "R.png"
+        # Consonantes bilabiales y oclusivas que requieren cerrar los labios
+        if token in ('m', 'b', 'v', 'f', 'p'):
+            return "closed"
             
-        # Vocales cerradas/semicerradas (I) -> L-R.png o CH-I-S.png
-        elif token == 'i':
-            self._toggle_state = not self._toggle_state
-            return "L-R.png" if self._toggle_state else "CH-I-S.png"
+        # Espacios y signos de puntuación (silencios) -> boca cerrada
+        elif token in (' ', ',', '.', ';', '?', '!', '\n', '\t', '-', '"', "'"):
+            return "closed"
             
-        # Vocales redondas (O, U) -> O.png
-        elif token in ('o', 'u'):
-            return "O.png"
-            
-        # Consonantes bilabiales y oclusivas (M, B, V, F, P) -> M-B-V-F-P.png
-        elif token in ('m', 'b', 'v', 'f', 'p'):
-            return "M-B-V-F-P.png"
-            
-        # Espacios y puntuación -> Callado.png
-        elif token in (' ', ',', '.', ';', '?', '!', '\n', '\t'):
-            return "Callado.png"
-            
-        # Consonantes generales -> R.png o L-R.png
+        # Vocales y otras consonantes generales -> boca abierta
         else:
-            return "R.png"
+            return "open"
