@@ -25,14 +25,14 @@ def main():
     if not config_manager.is_valid():
         print("Configuración no válida o inexistente. Mostrando ventana de configuración...")
         
-        # Mostrar un mensaje informativo
+        # Show an informative message
         msg = QMessageBox()
         msg.setIcon(QMessageBox.Icon.Information)
-        msg.setWindowTitle("Primer Arranque del Asistente")
+        msg.setWindowTitle("First Assistant Startup")
         msg.setText(
-            "Bienvenido al Asistente Virtual.\n\n"
-            "Es necesario configurar los dispositivos de audio y "
-            "especificar las rutas de los modelos de IA locales antes de comenzar."
+            "Welcome to the Virtual Assistant.\n\n"
+            "It is necessary to configure your audio devices and "
+            "specify local AI model paths before starting."
         )
         msg.setStandardButtons(QMessageBox.StandardButton.Ok)
         msg.exec()

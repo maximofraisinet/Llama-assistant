@@ -103,7 +103,7 @@ class TextInputWindow(QDialog):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Enviar Prompt al Asistente")
+        self.setWindowTitle("Send Prompt to Assistant")
         self.setWindowFlags(
             Qt.WindowType.FramelessWindowHint |
             Qt.WindowType.WindowStaysOnTopHint |
@@ -171,19 +171,19 @@ class TextInputWindow(QDialog):
         inner_layout.setContentsMargins(15, 15, 15, 15)
         inner_layout.setSpacing(10)
 
-        label = QLabel("Pregunta al Asistente:")
+        label = QLabel("Ask the Assistant:")
         inner_layout.addWidget(label)
 
         self.input_field = QLineEdit()
-        self.input_field.setPlaceholderText("Escribe o pega tu consulta aquí...")
+        self.input_field.setPlaceholderText("Type or paste your query here...")
         inner_layout.addWidget(self.input_field)
 
         btn_layout = QHBoxLayout()
-        cancel_btn = QPushButton("Cancelar")
+        cancel_btn = QPushButton("Cancel")
         cancel_btn.setObjectName("cancel_btn")
         cancel_btn.clicked.connect(self.reject)
         
-        submit_btn = QPushButton("Enviar")
+        submit_btn = QPushButton("Send")
         submit_btn.clicked.connect(self.on_submit)
         
         btn_layout.addStretch()
@@ -330,7 +330,7 @@ class AvatarWindow(QMainWindow):
         layout.addWidget(self.avatar_label)
 
         # Burbuja de texto (Status y transcripción/respuestas) dentro de un ScrollArea
-        self.status_label = QLabel("Cargando...", self)
+        self.status_label = QLabel("Loading...", self)
         self.status_label.setWordWrap(True)
         self.status_label.setTextFormat(Qt.TextFormat.MarkdownText)
         self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -499,7 +499,7 @@ class AvatarWindow(QMainWindow):
     @pyqtSlot(str)
     def update_status(self, text: str):
         self.status_label.setText(text)
-        if text.startswith("Hablando..."):
+        if text.startswith("Speaking..."):
             self.avatar_status = "speaking"
             self.update_avatar_display()
 
@@ -508,7 +508,7 @@ class AvatarWindow(QMainWindow):
         self.whisper = whisper
         self.llama = llama
         self.kokoro = kokoro
-        self.status_label.setText("Listo (Manten Ctrl + Alt + J)")
+        self.status_label.setText("Ready (Hold Ctrl + Alt + J)")
         
         # Ocultar la ventana automáticamente tras 10 segundos
         self.hide_timer.start(10000)
@@ -522,7 +522,7 @@ class AvatarWindow(QMainWindow):
 
     @pyqtSlot(str)
     def on_models_failed(self, error_msg: str):
-        self.status_label.setText(f"Error al cargar modelos: {error_msg}")
+        self.status_label.setText(f"Failed to load models: {error_msg}")
         QMessageBox.critical(
             self, 
             "Error de Inicialización", 
@@ -544,11 +544,11 @@ class AvatarWindow(QMainWindow):
     def contextMenuEvent(self, event):
         context_menu = QMenu(self)
         
-        config_action = QAction("Configuración", self)
+        config_action = QAction("Settings", self)
         config_action.triggered.connect(self.open_settings)
         context_menu.addAction(config_action)
         
-        exit_action = QAction("Salir", self)
+        exit_action = QAction("Exit", self)
         exit_action.triggered.connect(QApplication.quit)
         context_menu.addAction(exit_action)
         
@@ -608,7 +608,7 @@ class AvatarWindow(QMainWindow):
             self.mouth_state = "closed"
             self.eyes_state = "open"
             self.update_avatar_display()
-            self.status_label.setText("Listo (Manten Ctrl + Alt + J)")
+            self.status_label.setText("Ready (Hold Ctrl + Alt + J)")
 
         # Abrir la ventana de prompt de texto
         if not hasattr(self, 'text_input_window'):
@@ -696,7 +696,7 @@ class AvatarWindow(QMainWindow):
         self.avatar_status = "listening"
         self.mouth_state = "closed"
         self.update_avatar_display()
-        self.status_label.setText("Escuchando...")
+        self.status_label.setText("Listening...")
 
         # Iniciar grabación
         self.audio_recorder = AudioRecorder(device_index=self.config_manager.input_device_index)
@@ -713,19 +713,19 @@ class AvatarWindow(QMainWindow):
         self.avatar_status = "thinking"
         self.mouth_state = "closed"
         self.update_avatar_display()
-        self.status_label.setText("Procesando...")
+        self.status_label.setText("Processing...")
 
         # Detener la grabación y obtener los datos
         audio_data = self.audio_recorder.stop_recording()
         
         # Verificar que se grabó audio
         if len(audio_data) < 16000 * 0.5:  # menos de medio segundo
-            self.status_label.setText("Grabación demasiado corta.")
+            self.status_label.setText("Recording too short.")
             self.is_thinking_or_speaking = False
             self.avatar_status = "quiet"
             self.mouth_state = "closed"
             self.update_avatar_display()
-            self.status_label.setText("Listo (Manten Ctrl + Alt + J)")
+            self.status_label.setText("Ready (Hold Ctrl + Alt + J)")
             self.hide_timer.start(10000)  # Ocultar tras 10 segundos
             return
 
@@ -751,7 +751,7 @@ class AvatarWindow(QMainWindow):
     @pyqtSlot(str)
     def on_transcription_done(self, text: str):
         print(f"Usuario: {text}")
-        self.status_label.setText(f"Tú: {text}")
+        self.status_label.setText(f"You: {text}")
         # Limpiar texto para empezar a acumular respuesta del LLM
         self.llm_response_text = ""
 
@@ -778,7 +778,7 @@ class AvatarWindow(QMainWindow):
         self.mouth_state = "closed"
         self.eyes_state = "open"
         self.update_avatar_display()
-        self.status_label.setText("Listo (Manten Ctrl + Alt + J)")
+        self.status_label.setText("Ready (Hold Ctrl + Alt + J)")
         self.hide_timer.start(10000)  # Ocultar tras 10 segundos
 
     @pyqtSlot(str)
@@ -794,7 +794,7 @@ class AvatarWindow(QMainWindow):
 
     def hide_avatar(self):
         print("hide_avatar llamado - Ocultando ventana del avatar.")
-        self.status_label.setText("Listo (Manten Ctrl + Alt + J)")
+        self.status_label.setText("Ready (Hold Ctrl + Alt + J)")
         self.hide()
 
     def closeEvent(self, event):

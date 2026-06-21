@@ -106,7 +106,7 @@ class ModelLoaderThread(QThread):
     def run(self):
         try:
             # 1. Cargar Kokoro-ONNX
-            self.status_changed.emit("Cargando Kokoro TTS...")
+            self.status_changed.emit("Loading Kokoro TTS...")
             if not os.path.isfile(self.config.kokoro_onnx_path) or not os.path.isfile(self.config.kokoro_voices_path):
                 raise FileNotFoundError("Rutas de Kokoro ONNX o Voces BIN no válidas.")
             
@@ -116,7 +116,7 @@ class ModelLoaderThread(QThread):
             )
 
             # 2. Cargar Llama.cpp
-            self.status_changed.emit("Cargando Llama.cpp LLM...")
+            self.status_changed.emit("Loading Llama.cpp LLM...")
             if not os.path.isfile(self.config.llm_model_path):
                 raise FileNotFoundError("Ruta del modelo GGUF no válida.")
             
@@ -159,7 +159,7 @@ class ModelLoaderThread(QThread):
                 llama.chat_handler = chat_handler_with_thinking_disabled
 
             # 3. Cargar Faster Whisper
-            self.status_changed.emit("Cargando Faster-Whisper...")
+            self.status_changed.emit("Loading Faster-Whisper...")
             whisper = None
             if self.config.use_gpu:
                 try:
@@ -183,7 +183,7 @@ class ModelLoaderThread(QThread):
                     compute_type="int8"
                 )
 
-            self.status_changed.emit("Modelos cargados con éxito.")
+            self.status_changed.emit("Models loaded successfully.")
             self.loading_finished.emit(whisper, llama, kokoro)
 
         except Exception as e:
@@ -233,7 +233,7 @@ class SpeechPipelineWorker(QThread):
                     self.pipeline_finished.emit()
                     return
 
-                self.status_changed.emit("Transcribiendo voz...")
+                self.status_changed.emit("Transcribing voice...")
                 segments, info = self.whisper.transcribe(
                     self.audio_data, 
                     language=transcribe_lang,
@@ -242,14 +242,14 @@ class SpeechPipelineWorker(QThread):
                 
                 transcription = " ".join([segment.text for segment in segments]).strip()
                 if not transcription:
-                    self.status_changed.emit("No se detectó voz clara." if is_spanish else "No clear speech detected.")
+                    self.status_changed.emit("No clear speech detected.")
                     self.pipeline_finished.emit()
                     return
                     
                 self.transcription_done.emit(transcription)
 
             # --- 2. Preparar Prompt y Llamada a LLM ---
-            self.status_changed.emit("Pensando respuesta..." if is_spanish else "Thinking response...")
+            self.status_changed.emit("Thinking response...")
             hardware_info = get_hardware_info()
             
             custom_prompt = self.config.system_prompt
@@ -481,7 +481,7 @@ class SpeechPipelineWorker(QThread):
         Consumidor que corre en segundo plano procesando secuencialmente la cola de audio 
         y reproduciéndola a través de sounddevice con Lip-Sync.
         """
-        self.status_changed.emit("Hablando...")
+        self.status_changed.emit("Speaking...")
         while self.is_running:
             try:
                 audio_data, text = self.speech_queue.get(timeout=0.1)
