@@ -5,7 +5,7 @@
 [![License - MIT](https://img.shields.io/badge/License-MIT-yellow)](#)
 [![GPU Acceleration - Nvidia CUDA](https://img.shields.io/badge/GPU_Acceleration-Nvidia_CUDA-76B900?logo=nvidia&logoColor=white)](#)
 
-Llama Assistant is a professional, lightweight, and local desktop virtual assistant for Linux (optimized for KDE Plasma/Wayland). Represented by a red devil avatar with dynamic Lip-Sync, the assistant runs completely offline using state-of-the-art local AI models: Faster-Whisper for Speech-to-Text (STT), Llama.cpp for Large Language Model (LLM) streaming, and Kokoro-ONNX for Text-to-Speech (TTS) synthesis.
+Llama Assistant is a professional, lightweight, and local desktop virtual assistant for Linux (optimized for KDE Plasma/Wayland). Represented by an avatar with dynamic Lip-Sync, the assistant runs completely offline using state-of-the-art local AI models: Faster-Whisper for Speech-to-Text (STT), Llama.cpp for Large Language Model (LLM) streaming, and Kokoro-ONNX for Text-to-Speech (TTS) synthesis.
 
 ---
 
