@@ -5,7 +5,7 @@
 [![License - MIT](https://img.shields.io/badge/License-MIT-yellow)](#)
 [![GPU Acceleration - Nvidia CUDA](https://img.shields.io/badge/GPU_Acceleration-Nvidia_CUDA-76B900?logo=nvidia&logoColor=white)](#)
 
-Llama Assistant is a professional, lightweight, and local desktop virtual assistant for Linux (optimized for KDE Plasma/Wayland). Represented by an avatar with dynamic Lip-Sync, the assistant runs completely offline using state-of-the-art local AI models: Faster-Whisper for Speech-to-Text (STT), Llama.cpp for Large Language Model (LLM) streaming, and Kokoro-ONNX for Text-to-Speech (TTS) synthesis.
+Llama Assistant is a professional, lightweight, and local desktop virtual assistant for Linux (optimized for KDE Plasma/Wayland). The assistant runs silently as a background daemon—summoned instantly with a hotkey and automatically hiding after 10 seconds of inactivity to keep your desktop clutter-free. It runs completely offline using state-of-the-art local AI models: Faster-Whisper for Speech-to-Text (STT), Llama.cpp for Large Language Model (LLM) streaming, and Kokoro-ONNX for Text-to-Speech (TTS) synthesis.
 
 https://github.com/user-attachments/assets/db1c1cde-3cbc-4059-813c-4da56e9e704c
 
@@ -15,7 +15,7 @@ https://github.com/user-attachments/assets/db1c1cde-3cbc-4059-813c-4da56e9e704c
 
 *   **Local and Private**: No cloud calls. All models run locally on your CPU or Nvidia GPU.
 *   **Walkie-Talkie Style Hold-to-Talk**: Trigger listening by holding the global shortcut `Ctrl + Alt + J`. Release to process and listen.
-*   **Background Daemon Mode**: Runs silently in the system background. The avatar window automatically pops up when the hotkey is held, animates while talking, and disappears (`self.hide()`) after 10 seconds of inactivity.
+*   **Non-Intrusive Background Daemon**: The assistant runs silently in the background to avoid cluttering your workspace. The avatar window pops up instantly when the hotkey is held, animates while speaking, and automatically hides itself after 10 seconds of inactivity.
 *   **Wayland and KDE Plasma Compatibility**: Programmatically forces the `xcb` QPA platform to run under XWayland, allowing absolute window quadrant positioning and seamless transparent background overlays.
 *   **Interactive Terminal Execution**: If the LLM generates a command (e.g., inside `<cmd>df -h</cmd>` tags), a new terminal emulator window (supporting Konsole, GNOME Terminal, and xterm) automatically opens with the command prefilled in the Bash input buffer using `read -e -i`. It does not execute automatically, leaving the user in control to edit, confirm with `Enter`, or cancel with `Ctrl+C`.
 *   **Dynamic State-Matrix Animation**: The avatar uses a state matrix intersecting mouth state (`open`/`closed`) and eye state (`open`/`closed`) using preloaded assets (`quiet.png`, `cm-ce.png`, `om-oe.png`, `om-ce.png`, `listen.png`). Mouth movements are dynamically synchronized with speech tokens (bilabials and spacing close the mouth; vowels and other consonants open it).
@@ -82,6 +82,22 @@ The project relies on local model weights placed in the folder structure. By def
 
 1.  **Llama.cpp GGUF Model**: Place any instruct/chat model (e.g., Qwen-2.5-2B, Gemma-3-4B) in the project directory.
 2.  **Kokoro TTS weights**: Place `kokoro-v1.0.onnx` and `voices-v1.0.bin` in a directory named `kokoro-v1.0/` inside the project root.
+
+---
+
+## Customizing the Avatar
+
+You can easily replace the default avatar with any character or image sequence of your choice! 
+
+All avatar assets are stored as standard transparent PNG files in the `avatar/` directory. To use your own custom assistant avatar:
+1. Generate your custom character frames. I used free AI image generators and other free tools to make this avatar.
+2. Save and overwrite the files in the `avatar/` directory matching the following states:
+   * `quiet.png`: Idle state (eyes open, mouth closed).
+   * `cm-ce.png`: Eyes closed, mouth closed.
+   * `om-oe.png`: Eyes open, mouth open.
+   * `om-ce.png`: Eyes closed, mouth open.
+   * `listen.png`: Specialized listening state when capture is active.
+3. The application automatically calculates image dimensions at startup and unifies the canvas size to ensure smooth transitions without visual jitter.
 
 ---
 
