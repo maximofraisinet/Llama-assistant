@@ -7,6 +7,8 @@
 
 Llama Assistant is a professional, lightweight, and local desktop virtual assistant for Linux (optimized for KDE Plasma/Wayland). Represented by an avatar with dynamic Lip-Sync, the assistant runs completely offline using state-of-the-art local AI models: Faster-Whisper for Speech-to-Text (STT), Llama.cpp for Large Language Model (LLM) streaming, and Kokoro-ONNX for Text-to-Speech (TTS) synthesis.
 
+https://github.com/user-attachments/assets/db1c1cde-3cbc-4059-813c-4da56e9e704c
+
 ---
 
 ## Key Features
