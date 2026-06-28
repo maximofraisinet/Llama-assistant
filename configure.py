@@ -17,18 +17,18 @@ def main():
     del asistente sin necesidad de inicializar o cargar los modelos de IA en segundo plano.
     """
     app = QApplication(sys.argv)
-    app.setWindowIcon(QIcon("/home/maximo/Código/Python/Llama-assistant/avatar/icon.svg"))
+    app.setWindowIcon(QIcon("/home/maximo/Código/Python/Llama-assistant/icon.svg"))
     
     # Cargar el gestor de configuración
     config_manager = ConfigManager()
     
     # Crear y mostrar el diálogo
     dialog = SettingsDialog(config_manager)
-    dialog.setWindowTitle("Panel de Configuración del Asistente")
+    dialog.setWindowTitle("Configuration panel")
     
     # Ejecutar el diálogo
     dialog.exec()
-    print("Configuración finalizada.")
+    print("Configuration complete.")
 
 if __name__ == "__main__":
     main()

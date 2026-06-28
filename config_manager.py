@@ -23,7 +23,8 @@ class ConfigManager:
             "kokoro_voice": "em_alex",
             "system_prompt": None,
             "llm_n_ctx": 2048,
-            "whisper_model_size": "base"
+            "whisper_model_size": "base",
+            "avatar_name": "boy"
         }
         self.load()
 
@@ -220,3 +221,11 @@ class ConfigManager:
     @whisper_model_size.setter
     def whisper_model_size(self, val):
         self.config_data["whisper_model_size"] = val
+
+    @property
+    def avatar_name(self):
+        return self.config_data.get("avatar_name", "boy")
+
+    @avatar_name.setter
+    def avatar_name(self, val):
+        self.config_data["avatar_name"] = val

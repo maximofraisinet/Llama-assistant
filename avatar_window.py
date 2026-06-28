@@ -240,7 +240,7 @@ class AvatarWindow(QMainWindow):
         self.audio_recorder = None
         
         # Rutas de imágenes
-        self.avatar_dir = "/home/maximo/Código/Python/Llama-assistant/avatar"
+        self.avatar_dir = os.path.join("/home/maximo/Código/Python/Llama-assistant/avatar", self.config_manager.avatar_name)
         
         self.drag_position = QPoint()
         self.is_recording = False
@@ -376,24 +376,42 @@ class AvatarWindow(QMainWindow):
     def preload_pixmaps(self):
         """Pre-carga en memoria todos los cuadros del avatar, unificando su tamaño al canvas máximo."""
         self.pixmaps = {}
-        images = ["quiet.png", "cm-ce.png", "om-oe.png", "om-ce.png", "listen.png"]
+        required_bases = ["quiet", "cm-ce", "om-oe", "om-ce", "listen"]
+        allowed_extensions = {".png", ".jpg", ".jpeg"}
         
+        # Encontrar los archivos reales correspondientes a cada base en el directorio del avatar
+        resolved_files = {}
+        if os.path.exists(self.avatar_dir):
+            try:
+                for f in os.listdir(self.avatar_dir):
+                    base, ext = os.path.splitext(f)
+                    base_lower = base.lower()
+                    ext_lower = ext.lower()
+                    if base_lower in required_bases and ext_lower in allowed_extensions:
+                        resolved_files[base_lower] = f
+            except Exception as e:
+                print(f"Error al listar avatar_dir: {e}")
+
         raw_pixmaps = {}
         max_w = 0
         max_h = 0
         
-        # 1. Cargar las imágenes originales y buscar las dimensiones máximas
-        for img in images:
-            path = os.path.join(self.avatar_dir, img)
-            if os.path.exists(path):
+        # 1. Cargar las imágenes encontradas y buscar las dimensiones máximas
+        for base in required_bases:
+            img_file = resolved_files.get(base)
+            if img_file:
+                path = os.path.join(self.avatar_dir, img_file)
                 pixmap = QPixmap(path)
-                raw_pixmaps[img] = pixmap
-                if pixmap.width() > max_w:
-                    max_w = pixmap.width()
-                if pixmap.height() > max_h:
-                    max_h = pixmap.height()
+                if not pixmap.isNull():
+                    raw_pixmaps[base] = pixmap
+                    if pixmap.width() > max_w:
+                        max_w = pixmap.width()
+                    if pixmap.height() > max_h:
+                        max_h = pixmap.height()
+                else:
+                    print(f"Error: Pixmap inválido para {path}")
             else:
-                print(f"Error: No se encontró la imagen {path}")
+                print(f"Error: No se encontró archivo para el estado '{base}' en {self.avatar_dir}")
         
         if not raw_pixmaps:
             return
@@ -401,7 +419,7 @@ class AvatarWindow(QMainWindow):
         print(f"Dimensiones máximas unificadas para evitar saltos: {max_w}x{max_h}px")
         
         # 2. Redimensionar cada imagen al canvas máximo centrando el dibujo
-        for img, pixmap in raw_pixmaps.items():
+        for base, pixmap in raw_pixmaps.items():
             unified_pixmap = QPixmap(max_w, max_h)
             unified_pixmap.fill(Qt.GlobalColor.transparent)
             
@@ -412,24 +430,13 @@ class AvatarWindow(QMainWindow):
             painter.drawPixmap(x, y, pixmap)
             painter.end()
             
-            self.pixmaps[img] = unified_pixmap
+            self.pixmaps[base] = unified_pixmap
 
     def set_avatar_image(self, img_name: str):
         """Actualiza la imagen en pantalla a partir del diccionario precargado."""
         pixmap = self.pixmaps.get(img_name)
         if not pixmap:
-            # Si no está cargada (ej. cargando por primera vez), intentar cargarla o usar quiet.png como fallback
-            path = os.path.join(self.avatar_dir, img_name)
-            if os.path.exists(path):
-                pixmap = QPixmap(path)
-                self.pixmaps[img_name] = pixmap
-            else:
-                pixmap = self.pixmaps.get("quiet.png")
-                if not pixmap:
-                    path_quiet = os.path.join(self.avatar_dir, "quiet.png")
-                    if os.path.exists(path_quiet):
-                        pixmap = QPixmap(path_quiet)
-                        self.pixmaps["quiet.png"] = pixmap
+            pixmap = self.pixmaps.get("quiet")
 
         if pixmap:
             # Mantener márgenes estables (6px arriba/abajo) para evitar saltos
@@ -446,18 +453,18 @@ class AvatarWindow(QMainWindow):
     def update_avatar_display(self):
         """Actualiza el avatar en pantalla según el estado actual (matriz de estados)."""
         if self.avatar_status == "listening":
-            img_name = "listen.png"
+            img_name = "listen"
         else:
             if self.mouth_state == "closed":
                 if self.eyes_state == "closed":
-                    img_name = "cm-ce.png"
+                    img_name = "cm-ce"
                 else:
-                    img_name = "quiet.png"
+                    img_name = "quiet"
             else: # open
                 if self.eyes_state == "closed":
-                    img_name = "om-ce.png"
+                    img_name = "om-ce"
                 else:
-                    img_name = "om-oe.png"
+                    img_name = "om-oe"
         self.set_avatar_image(img_name)
 
     def schedule_next_blink(self):
@@ -561,6 +568,10 @@ class AvatarWindow(QMainWindow):
 
         dialog = SettingsDialog(self.config_manager, self)
         if dialog.exec() == SettingsDialog.DialogCode.Accepted:
+            # Actualizar la ruta del avatar y recargar sus pixmaps
+            self.avatar_dir = os.path.join("/home/maximo/Código/Python/Llama-assistant/avatar", self.config_manager.avatar_name)
+            self.preload_pixmaps()
+            self.update_avatar_display()
             # Reposicionar ventana dinámicamente
             self.reposition_window()
             # Si se guardó nueva configuración, recargar modelos

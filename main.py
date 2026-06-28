@@ -16,7 +16,7 @@ def main():
     # Inicializar la aplicación Qt
     app = QApplication(sys.argv)
     app.setQuitOnLastWindowClosed(False)
-    app.setWindowIcon(QIcon("/home/maximo/Código/Python/Llama-assistant/avatar/icon.svg"))
+    app.setWindowIcon(QIcon("/home/maximo/Código/Python/Llama-assistant/icon.svg"))
     
     # Crear el gestor de configuración
     config_manager = ConfigManager()
